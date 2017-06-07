@@ -18,24 +18,7 @@ type LModule = llvm::prelude::LLVMModuleRef;
 type LBuilder = llvm::prelude::LLVMBuilderRef;
 type LValue = llvm::prelude::LLVMValueRef;
 
-pub mod ast {
-    pub struct Module {
-        pub functions: Vec<Function>,
-    }
-
-    pub struct Function {
-        pub name: String,
-        pub body: Expression,
-    }
-
-    pub enum Expression {
-        Add(Box<Expression>, Box<Expression>),
-        Sub(Box<Expression>, Box<Expression>),
-        Mult(Box<Expression>, Box<Expression>),
-        Div(Box<Expression>, Box<Expression>),
-        LiteralInt32(i32),
-    }
-}
+pub mod ast;
 
 pub struct Builder {
     context: LContext,
