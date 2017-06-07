@@ -9,7 +9,19 @@ use ast;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Type {
+    Int1,
+    Int8,
+    Int16,
     Int32,
+    Int64,
+
+    UInt8,
+    UInt16,
+    UInt32,
+    UInt64,
+
+    Float,
+    Double
 }
 
 pub fn check(module: &ast::Module) -> Result<(), String> {
@@ -38,7 +50,26 @@ fn expression(expr: &ast::Expression) -> Result<Type, String> {
                 Err(format!("invalid arithmetic operator for {:?} and {:?}", lhs, rhs))
             }
         },
-        LiteralInt32(_) => Ok(Type::Int32),
+        Literal(ref lit) => literal(lit),
     }
+}
+
+fn literal(lit: &ast::Literal) -> Result<Type, String> {
+    use ast::Literal::*;
+    Ok(match *lit {
+        Int1(_) => Type::Int1,
+        Int8(_) => Type::Int8,
+        Int16(_) => Type::Int16,
+        Int32(_) => Type::Int32,
+        Int64(_) => Type::Int64,
+
+        UInt8(_) => Type::UInt8,
+        UInt16(_) => Type::UInt16,
+        UInt32(_) => Type::UInt32,
+        UInt64(_) => Type::UInt64,
+
+        Float(_) => Type::Float,
+        Double(_) => Type::Double,
+    })
 }
 

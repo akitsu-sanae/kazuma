@@ -99,10 +99,79 @@ impl Builder {
                     llvm::core::LLVMBuildSDiv(self.builder, lhs, rhs, name.as_ptr())
                 }
             },
-            LiteralInt32(ref n) => {
+            Literal(ref lit) => self.literal(lit),
+        }
+    }
+
+    fn literal(&self, lit: &ast::Literal) -> LValue {
+        use ast::Literal::*;
+        match *lit {
+            Int1(ref n) => {
+                unsafe {
+                    let int_type = llvm::core::LLVMInt1TypeInContext(self.context);
+                    llvm::core::LLVMConstInt(int_type, n.clone() as u64, 0)
+                }
+            },
+            Int8(ref n) => {
+                unsafe {
+                    let int_type = llvm::core::LLVMInt8TypeInContext(self.context);
+                    llvm::core::LLVMConstInt(int_type, n.clone() as u64, 0)
+                }
+            },
+            Int16(ref n) => {
+                unsafe {
+                    let int_type = llvm::core::LLVMInt16TypeInContext(self.context);
+                    llvm::core::LLVMConstInt(int_type, n.clone() as u64, 0)
+                }
+            },
+            Int32(ref n) => {
                 unsafe {
                     let int_type = llvm::core::LLVMInt32TypeInContext(self.context);
                     llvm::core::LLVMConstInt(int_type, n.clone() as u64, 0)
+                }
+            },
+            Int64(ref n) => {
+                unsafe {
+                    let int_type = llvm::core::LLVMInt64TypeInContext(self.context);
+                    llvm::core::LLVMConstInt(int_type, n.clone() as u64, 0)
+                }
+            },
+
+            UInt8(ref n) => {
+                unsafe {
+                    let uint_type = llvm::core::LLVMInt8TypeInContext(self.context);
+                    llvm::core::LLVMConstInt(uint_type, n.clone() as u64, 1)
+                }
+            },
+            UInt16(ref n) => {
+                unsafe {
+                    let uint_type = llvm::core::LLVMInt16TypeInContext(self.context);
+                    llvm::core::LLVMConstInt(uint_type, n.clone() as u64, 1)
+                }
+            },
+            UInt32(ref n) => {
+                unsafe {
+                    let uint_type = llvm::core::LLVMInt32TypeInContext(self.context);
+                    llvm::core::LLVMConstInt(uint_type, n.clone() as u64, 1)
+                }
+            },
+            UInt64(ref n) => {
+                unsafe {
+                    let uint_type = llvm::core::LLVMInt64TypeInContext(self.context);
+                    llvm::core::LLVMConstInt(uint_type, n.clone() as u64, 1)
+                }
+            },
+
+            Float(ref n) => {
+                unsafe {
+                    let float_type = llvm::core::LLVMFloatTypeInContext(self.context);
+                    llvm::core::LLVMConstReal(float_type, n.clone())
+                }
+            },
+            Double(ref n) => {
+                unsafe {
+                    let double_type = llvm::core::LLVMDoubleTypeInContext(self.context);
+                    llvm::core::LLVMConstReal(double_type, n.clone())
                 }
             },
         }
@@ -127,10 +196,10 @@ fn test() {
             ast::Function {
                 name: "main".to_string(),
                 body: ast::Expression::Add(
-                    box ast::Expression::LiteralInt32(4),
+                    box ast::Expression::Literal(ast::Literal::Int32(4)),
                     box ast::Expression::Add(
-                        box ast::Expression::LiteralInt32(3),
-                        box ast::Expression::LiteralInt32(5)))
+                        box ast::Expression::Literal(ast::Literal::Int32(3)),
+                        box ast::Expression::Literal(ast::Literal::Int32(5))))
             }
         ]
     }).unwrap();
