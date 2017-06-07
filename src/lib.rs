@@ -19,6 +19,7 @@ type LBuilder = llvm::prelude::LLVMBuilderRef;
 type LValue = llvm::prelude::LLVMValueRef;
 
 pub mod ast;
+mod type_checker;
 
 pub struct Builder {
     context: LContext,
@@ -40,12 +41,14 @@ impl Builder {
         }
     }
 
-    pub fn module(&self, module: &ast::Module) {
+    pub fn module(&self, module: &ast::Module) -> Result<String, String> {
+        type_checker::check(module)?;
+
         for func in module.functions.iter() {
             self.function(func);
         }
         unsafe {
-            llvm::core::LLVMDumpModule(self.module);
+            CString::from_raw(llvm::core::LLVMPrintModuleToString(self.module)).into_string().map_err(|e| format!("{}", e))
         }
     }
 
@@ -125,9 +128,11 @@ fn test() {
                 name: "main".to_string(),
                 body: ast::Expression::Add(
                     box ast::Expression::LiteralInt32(4),
-                    box ast::Expression::LiteralInt32(5))
+                    box ast::Expression::Add(
+                        box ast::Expression::LiteralInt32(3),
+                        box ast::Expression::LiteralInt32(5)))
             }
         ]
-    });
+    }).unwrap();
 }
 
