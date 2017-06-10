@@ -13,7 +13,14 @@ pub struct Module {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function {
     pub name: String,
-    pub body: Expression,
+    pub body: Vec<Statement>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Statement {
+    Return(Expression),
+    ReturnVoid,
+    Expression(Expression),
 }
 
 #[derive(Debug, Clone, PartialEq)]

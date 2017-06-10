@@ -59,8 +59,25 @@ impl Builder {
             let function = llvm::core::LLVMAddFunction(self.module, func.name.as_str().as_ptr() as *const _, func_type);
             let block = llvm::core::LLVMAppendBasicBlockInContext(self.context, function, b"entry\0".as_ptr() as *const _);
             llvm::core::LLVMPositionBuilderAtEnd(self.builder, block);
-            let result = self.expression(&func.body);
-            llvm::core::LLVMBuildRet(self.builder, result);
+            for statement in func.body.iter() {
+                self.statement(statement);
+            }
+        }
+    }
+
+    fn statement(&self, statement: &ast::Statement) {
+        use ast::Statement::*;
+        match *statement {
+            Return(ref expr) => unsafe {
+                let expr = self.expression(expr);
+                llvm::core::LLVMBuildRet(self.builder, expr);
+            },
+            ReturnVoid => unsafe {
+                llvm::core::LLVMBuildRetVoid(self.builder);
+            },
+            Expression(ref expr) => {
+                self.expression(expr);
+            }
         }
     }
 

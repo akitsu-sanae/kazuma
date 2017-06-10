@@ -32,7 +32,15 @@ pub fn check(module: &ast::Module) -> Result<(), String> {
 }
 
 fn function(func: &ast::Function) -> Result<(), String> {
-    expression(&func.body).map(|_| ())
+    for stmnt in func.body.iter() {
+        use ast::Statement::*;
+        match *stmnt {
+            Return(ref expr) => { expression(expr)?; },
+            ReturnVoid => (),
+            Expression(ref expr) => { expression(expr)?; },
+        }
+    }
+    Ok(())
 }
 
 fn expression(expr: &ast::Expression) -> Result<Type, String> {
