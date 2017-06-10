@@ -10,9 +10,29 @@ pub struct Module {
     pub functions: Vec<Function>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Type {
+    Int1,
+    Int8,
+    Int16,
+    Int32,
+    Int64,
+
+    UInt8,
+    UInt16,
+    UInt32,
+    UInt64,
+
+    Float,
+    Double
+}
+
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function {
     pub name: String,
+    pub arguments: Vec<(String, Type)>,
+    pub return_type: Type,
     pub body: Vec<Statement>,
 }
 

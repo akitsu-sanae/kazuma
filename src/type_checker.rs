@@ -7,23 +7,6 @@
 
 use ast;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum Type {
-    Int1,
-    Int8,
-    Int16,
-    Int32,
-    Int64,
-
-    UInt8,
-    UInt16,
-    UInt32,
-    UInt64,
-
-    Float,
-    Double
-}
-
 pub fn check(module: &ast::Module) -> Result<(), String> {
     for func in module.functions.iter() {
         function(&func)?;
@@ -43,7 +26,7 @@ fn function(func: &ast::Function) -> Result<(), String> {
     Ok(())
 }
 
-fn expression(expr: &ast::Expression) -> Result<Type, String> {
+fn expression(expr: &ast::Expression) -> Result<ast::Type, String> {
     use ast::Expression::*;
     match *expr {
         Add(box ref lhs, box ref rhs) |
@@ -62,22 +45,22 @@ fn expression(expr: &ast::Expression) -> Result<Type, String> {
     }
 }
 
-fn literal(lit: &ast::Literal) -> Result<Type, String> {
+fn literal(lit: &ast::Literal) -> Result<ast::Type, String> {
     use ast::Literal::*;
     Ok(match *lit {
-        Int1(_) => Type::Int1,
-        Int8(_) => Type::Int8,
-        Int16(_) => Type::Int16,
-        Int32(_) => Type::Int32,
-        Int64(_) => Type::Int64,
+        Int1(_) => ast::Type::Int1,
+        Int8(_) => ast::Type::Int8,
+        Int16(_) => ast::Type::Int16,
+        Int32(_) => ast::Type::Int32,
+        Int64(_) => ast::Type::Int64,
 
-        UInt8(_) => Type::UInt8,
-        UInt16(_) => Type::UInt16,
-        UInt32(_) => Type::UInt32,
-        UInt64(_) => Type::UInt64,
+        UInt8(_) => ast::Type::UInt8,
+        UInt16(_) => ast::Type::UInt16,
+        UInt32(_) => ast::Type::UInt32,
+        UInt64(_) => ast::Type::UInt64,
 
-        Float(_) => Type::Float,
-        Double(_) => Type::Double,
+        Float(_) => ast::Type::Float,
+        Double(_) => ast::Type::Double,
     })
 }
 

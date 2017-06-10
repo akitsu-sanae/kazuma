@@ -11,11 +11,11 @@
 extern crate llvm_sys as llvm;
 
 use std::ffi::CString;
-use std::ptr;
 
 type LContext = llvm::prelude::LLVMContextRef;
 type LModule = llvm::prelude::LLVMModuleRef;
 type LBuilder = llvm::prelude::LLVMBuilderRef;
+type LType = llvm::prelude::LLVMTypeRef;
 type LValue = llvm::prelude::LLVMValueRef;
 
 pub mod ast;
@@ -52,10 +52,42 @@ impl Builder {
         }
     }
 
+    fn type_(&self, ty: &ast::Type) -> LType {
+        use ast::Type::*;
+        match *ty {
+            Int1 => unsafe {
+                llvm::core::LLVMInt1TypeInContext(self.context)
+            },
+            Int8 | UInt8 => unsafe {
+                llvm::core::LLVMInt8TypeInContext(self.context)
+            },
+            Int16 | UInt16 => unsafe {
+                llvm::core::LLVMInt16TypeInContext(self.context)
+            },
+            Int32 | UInt32 => unsafe {
+                llvm::core::LLVMInt32TypeInContext(self.context)
+            },
+            Int64 | UInt64 => unsafe {
+                llvm::core::LLVMInt64TypeInContext(self.context)
+            },
+            Float => unsafe {
+                llvm::core::LLVMFloatTypeInContext(self.context)
+            },
+            Double => unsafe {
+                llvm::core::LLVMDoubleTypeInContext(self.context)
+            },
+        }
+    }
+
+    fn arguments_type(&self, args: &Vec<(String, ast::Type)>) -> Vec<LType> {
+        args.iter().map(|&(_, ref ty)| self.type_(ty)).collect()
+    }
+
     fn function(&self, func: &ast::Function) {
         unsafe {
-            let void_type = llvm::core::LLVMVoidTypeInContext(self.context);
-            let func_type  = llvm::core::LLVMFunctionType(void_type, ptr::null_mut(), 0, 0);
+            let mut arg_types = self.arguments_type(&func.arguments);
+            let ret_type = self.type_(&func.return_type);
+            let func_type  = llvm::core::LLVMFunctionType(ret_type, arg_types.as_mut_ptr(), func.arguments.len() as u32, 0);
             let function = llvm::core::LLVMAddFunction(self.module, func.name.as_str().as_ptr() as *const _, func_type);
             let block = llvm::core::LLVMAppendBasicBlockInContext(self.context, function, b"entry\0".as_ptr() as *const _);
             llvm::core::LLVMPositionBuilderAtEnd(self.builder, block);
@@ -212,11 +244,16 @@ fn test() {
         functions: vec![
             ast::Function {
                 name: "main".to_string(),
-                body: ast::Expression::Add(
-                    box ast::Expression::Literal(ast::Literal::Int32(4)),
-                    box ast::Expression::Add(
-                        box ast::Expression::Literal(ast::Literal::Int32(3)),
-                        box ast::Expression::Literal(ast::Literal::Int32(5))))
+                arguments: vec![("a".to_string(), ast::Type::Int8)],
+                return_type: ast::Type::Int16,
+                body: vec![
+                    ast::Statement::Return(
+                        ast::Expression::Add(
+                            box ast::Expression::Literal(ast::Literal::Int32(4)),
+                            box ast::Expression::Add(
+                                box ast::Expression::Literal(ast::Literal::Int32(3)),
+                                box ast::Expression::Literal(ast::Literal::Int32(5)))))
+                ]
             }
         ]
     }).unwrap();
