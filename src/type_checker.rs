@@ -29,16 +29,25 @@ fn function(func: &ast::Function) -> Result<(), String> {
 fn expression(expr: &ast::Expression) -> Result<ast::Type, String> {
     use ast::Expression::*;
     match *expr {
-        Add(box ref lhs, box ref rhs) |
-        Sub(box ref lhs, box ref rhs) |
-        Mult(box ref lhs, box ref rhs) |
-        Div(box ref lhs, box ref rhs) => {
+        Add(box ref lhs, box ref rhs) | Sub(box ref lhs, box ref rhs) |
+        Mult(box ref lhs, box ref rhs) | Div(box ref lhs, box ref rhs) => {
             let lhs = expression(lhs)?;
             let rhs = expression(rhs)?;
             if lhs == rhs {
                 Ok(lhs)
             } else {
                 Err(format!("invalid arithmetic operator for {:?} and {:?}", lhs, rhs))
+            }
+        },
+        Equal(box ref lhs, box ref rhs) | NotEqual(box ref lhs, box ref rhs) |
+        Greater(box ref lhs, box ref rhs) | GreaterEqual(box ref lhs, box ref rhs) |
+        Less(box ref lhs, box ref rhs) | LessEqual(box ref lhs, box ref rhs) => {
+            let lhs = expression(lhs)?;
+            let rhs = expression(rhs)?;
+            if lhs == rhs {
+                Ok(ast::Type::Int1)
+            } else {
+                Err(format!("invalid comparison for {:?} and {:?}", lhs, rhs))
             }
         },
         Literal(ref lit) => literal(lit),

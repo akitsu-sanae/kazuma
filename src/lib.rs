@@ -148,8 +148,31 @@ impl Builder {
                     llvm::core::LLVMBuildSDiv(self.builder, lhs, rhs, name.as_ptr())
                 }
             },
+            Equal(box ref lhs, box ref rhs) | NotEqual(box ref lhs, box ref rhs) |
+            Greater(box ref lhs, box ref rhs) | GreaterEqual(box ref lhs, box ref rhs) |
+            Less(box ref lhs, box ref rhs) | LessEqual(box ref lhs, box ref rhs) => {
+                let lhs = self.expression(lhs);
+                let rhs = self.expression(rhs);
+                let name = CString::new("cmptmp").unwrap();
+                unsafe {
+                    llvm::core::LLVMBuildICmp(self.builder, self.comp_pred(expr).unwrap(), lhs, rhs, name.as_ptr())
+                }
+            },
             Literal(ref lit) => self.literal(lit),
         }
+    }
+
+    fn comp_pred(&self, expr: &ast::Expression) -> Result<llvm::LLVMIntPredicate, String> {
+        use ast::Expression::*;
+        Ok(match *expr {
+            Equal(_, _) => llvm::LLVMIntPredicate::LLVMIntEQ,
+            NotEqual(_, _) => llvm::LLVMIntPredicate::LLVMIntNE,
+            Greater(_, _) => llvm::LLVMIntPredicate::LLVMIntSGT,
+            GreaterEqual(_, _) => llvm::LLVMIntPredicate::LLVMIntSGE,
+            Less(_, _) => llvm::LLVMIntPredicate::LLVMIntSLT,
+            LessEqual(_, _) => llvm::LLVMIntPredicate::LLVMIntSLE,
+            _ => Err(format!("non compare expr: {:?}", expr))?,
+        })
     }
 
     fn literal(&self, lit: &ast::Literal) -> LValue {
