@@ -11,6 +11,7 @@
 extern crate llvm_sys as llvm;
 
 use std::ffi::CString;
+use std::collections::HashMap;
 
 type LContext = llvm::prelude::LLVMContextRef;
 type LModule = llvm::prelude::LLVMModuleRef;
@@ -19,7 +20,6 @@ type LType = llvm::prelude::LLVMTypeRef;
 type LValue = llvm::prelude::LLVMValueRef;
 
 pub mod ast;
-mod type_checker;
 
 pub struct Builder {
     context: LContext,
@@ -42,8 +42,6 @@ impl Builder {
     }
 
     pub fn module(&self, module: &ast::Module) -> Result<String, String> {
-        type_checker::check(module)?;
-
         for func in module.functions.iter() {
             self.function(func);
         }
@@ -53,29 +51,14 @@ impl Builder {
     }
 
     fn type_(&self, ty: &ast::Type) -> LType {
-        use ast::Type::*;
         match *ty {
-            Int1 => unsafe {
+            ast::Type::Boolean => unsafe {
                 llvm::core::LLVMInt1TypeInContext(self.context)
             },
-            Int8 | UInt8 => unsafe {
-                llvm::core::LLVMInt8TypeInContext(self.context)
-            },
-            Int16 | UInt16 => unsafe {
-                llvm::core::LLVMInt16TypeInContext(self.context)
-            },
-            Int32 | UInt32 => unsafe {
+            ast::Type::Integer => unsafe {
                 llvm::core::LLVMInt32TypeInContext(self.context)
             },
-            Int64 | UInt64 => unsafe {
-                llvm::core::LLVMInt64TypeInContext(self.context)
-            },
-            Float => unsafe {
-                llvm::core::LLVMFloatTypeInContext(self.context)
-            },
-            Double => unsafe {
-                llvm::core::LLVMDoubleTypeInContext(self.context)
-            },
+            ast::Type::String => panic!("unimplemented"),
         }
     }
 
@@ -91,161 +74,106 @@ impl Builder {
             let function = llvm::core::LLVMAddFunction(self.module, func.name.as_str().as_ptr() as *const _, func_type);
             let block = llvm::core::LLVMAppendBasicBlockInContext(self.context, function, b"entry\0".as_ptr() as *const _);
             llvm::core::LLVMPositionBuilderAtEnd(self.builder, block);
-            for statement in func.body.iter() {
-                self.statement(statement);
-            }
+            let ret_value = self.expression(&func.body, &mut HashMap::new());
+            llvm::core::LLVMBuildRet(self.builder, ret_value);
         }
     }
 
-    fn statement(&self, statement: &ast::Statement) {
-        use ast::Statement::*;
-        match *statement {
-            Return(ref expr) => unsafe {
-                let expr = self.expression(expr);
-                llvm::core::LLVMBuildRet(self.builder, expr);
-            },
-            ReturnVoid => unsafe {
-                llvm::core::LLVMBuildRetVoid(self.builder);
-            },
-            Expression(ref expr) => {
-                self.expression(expr);
-            }
-        }
-    }
-
-    fn expression(&self, expr: &ast::Expression) -> LValue {
+    fn expression(&self, expr: &ast::Expression, env: &mut HashMap<String, LValue>) -> LValue {
         use ast::Expression::*;
         match *expr {
-            Add(box ref lhs, box ref rhs) => {
-                let lhs = self.expression(lhs);
-                let rhs = self.expression(rhs);
-                let name = CString::new("addtmp").unwrap();
+            Variable(ref name) => {
+                let var = *env.get(name).unwrap();
                 unsafe {
-                    llvm::core::LLVMBuildAdd(self.builder, lhs, rhs, name.as_ptr())
+                    let name = CString::new("loaded").unwrap();
+                    llvm::core::LLVMBuildLoad(self.builder, var, name.as_ptr())
                 }
             },
-            Sub(box ref lhs, box ref rhs) => {
-                let lhs = self.expression(lhs);
-                let rhs = self.expression(rhs);
-                let name = CString::new("subtmp").unwrap();
+            BinOp(ref op, box ref lhs, box ref rhs) => self.binop(op, lhs, rhs, env),
+            Print(box ref e) => {
+                let value = self.expression(e, env);
                 unsafe {
-                    llvm::core::LLVMBuildSub(self.builder, lhs, rhs, name.as_ptr())
+                    let printf = llvm::core::LLVMGetNamedFunction(self.module, "printf".as_ptr() as *const i8);
+                    let format_ptr = llvm::core::LLVMGetNamedGlobal(self.module, ".buildin.printf.format.numbr".as_ptr() as *const i8);
+                    let mut args = vec![format_ptr, value];
+                    let ret_name = CString::new("ret").unwrap();
+                    llvm::core::LLVMBuildCall(
+                        self.builder,
+                        printf,
+                        args.as_mut_ptr(),
+                        args.len() as std::os::raw::c_uint,
+                        ret_name.as_ptr())
                 }
             },
-            Mult(box ref lhs, box ref rhs) => {
-                let lhs = self.expression(lhs);
-                let rhs = self.expression(rhs);
-                let name = CString::new("subtmp").unwrap();
+            Let(ref name, ref typ, box ref init) => {
+                let ty = self.type_(typ);
+                let init = self.expression(init, env);
                 unsafe {
-                    llvm::core::LLVMBuildMul(self.builder, lhs, rhs, name.as_ptr())
+                    let stack = llvm::core::LLVMBuildAlloca(self.builder, ty, name.as_ptr() as *const i8);
+                    llvm::core::LLVMBuildStore(self.builder, init, stack)
                 }
             },
-            Div(box ref lhs, box ref rhs) => {
-                let lhs = self.expression(lhs);
-                let rhs = self.expression(rhs);
-                let name = CString::new("subtmp").unwrap();
+            Assign(ref name, box ref rhs) => {
+                let var = *env.get(name).unwrap();
+                let rhs = self.expression(rhs, env);
                 unsafe {
-                    llvm::core::LLVMBuildSDiv(self.builder, lhs, rhs, name.as_ptr())
+                    llvm::core::LLVMBuildStore(self.builder, rhs, var)
                 }
-            },
-            Equal(box ref lhs, box ref rhs) | NotEqual(box ref lhs, box ref rhs) |
-            Greater(box ref lhs, box ref rhs) | GreaterEqual(box ref lhs, box ref rhs) |
-            Less(box ref lhs, box ref rhs) | LessEqual(box ref lhs, box ref rhs) => {
-                let lhs = self.expression(lhs);
-                let rhs = self.expression(rhs);
-                let name = CString::new("cmptmp").unwrap();
-                unsafe {
-                    llvm::core::LLVMBuildICmp(self.builder, self.comp_pred(expr).unwrap(), lhs, rhs, name.as_ptr())
-                }
-            },
-            Literal(ref lit) => self.literal(lit),
+            }
+            Literal(ref lit) => self.literal(lit)
         }
     }
 
-    fn comp_pred(&self, expr: &ast::Expression) -> Result<llvm::LLVMIntPredicate, String> {
+    fn binop(&self, op: &ast::BinaryOperator, lhs: &ast::Expression, rhs: &ast::Expression, env: &mut HashMap<String, LValue>) -> LValue {
         use ast::Expression::*;
-        Ok(match *expr {
-            Equal(_, _) => llvm::LLVMIntPredicate::LLVMIntEQ,
-            NotEqual(_, _) => llvm::LLVMIntPredicate::LLVMIntNE,
-            Greater(_, _) => llvm::LLVMIntPredicate::LLVMIntSGT,
-            GreaterEqual(_, _) => llvm::LLVMIntPredicate::LLVMIntSGE,
-            Less(_, _) => llvm::LLVMIntPredicate::LLVMIntSLT,
-            LessEqual(_, _) => llvm::LLVMIntPredicate::LLVMIntSLE,
-            _ => Err(format!("non compare expr: {:?}", expr))?,
-        })
+        use ast::BinaryOperator::*;
+        let lhs = self.expression(lhs, env);
+        let rhs = self.expression(rhs, env);
+        match *op {
+            Add => unsafe {
+                let name = CString::new("addtmp").unwrap();
+                llvm::core::LLVMBuildAdd(self.builder, lhs, rhs, name.as_ptr())
+            },
+            Sub => unsafe {
+                let name = CString::new("subtmp").unwrap();
+                llvm::core::LLVMBuildSub(self.builder, lhs, rhs, name.as_ptr())
+            },
+            Mult => unsafe {
+                let name = CString::new("multmp").unwrap();
+                llvm::core::LLVMBuildMul(self.builder, lhs, rhs, name.as_ptr())
+            },
+            Div => unsafe {
+                let name = CString::new("divtmp").unwrap();
+                llvm::core::LLVMBuildSDiv(self.builder, lhs, rhs, name.as_ptr())
+            },
+            Equal | NotEqual | Greater | GreaterEqual | Less | LessEqual => unsafe {
+                let name = CString::new("cmptmp").unwrap();
+                llvm::core::LLVMBuildICmp(self.builder, convert_to_llvm(op).unwrap(), lhs, rhs, name.as_ptr())
+            },
+
+            Call => panic!("unimplemented"),
+            Sequent => rhs,
+        }
     }
 
     fn literal(&self, lit: &ast::Literal) -> LValue {
         use ast::Literal::*;
         match *lit {
-            Int1(ref n) => {
+            Boolean(ref b) => {
                 unsafe {
-                    let int_type = llvm::core::LLVMInt1TypeInContext(self.context);
-                    llvm::core::LLVMConstInt(int_type, n.clone() as u64, 0)
+                    let int_type = self.type_(&ast::Type::Boolean);
+                    llvm::core::LLVMConstInt(int_type, if *b { 1 } else { 0 }, 0)
                 }
-            },
-            Int8(ref n) => {
+            }
+            Integer(ref n) => {
                 unsafe {
-                    let int_type = llvm::core::LLVMInt8TypeInContext(self.context);
-                    llvm::core::LLVMConstInt(int_type, n.clone() as u64, 0)
+                    let int_type = self.type_(&ast::Type::Integer);
+                    llvm::core::LLVMConstInt(int_type, *n as u64, 0)
                 }
-            },
-            Int16(ref n) => {
-                unsafe {
-                    let int_type = llvm::core::LLVMInt16TypeInContext(self.context);
-                    llvm::core::LLVMConstInt(int_type, n.clone() as u64, 0)
-                }
-            },
-            Int32(ref n) => {
-                unsafe {
-                    let int_type = llvm::core::LLVMInt32TypeInContext(self.context);
-                    llvm::core::LLVMConstInt(int_type, n.clone() as u64, 0)
-                }
-            },
-            Int64(ref n) => {
-                unsafe {
-                    let int_type = llvm::core::LLVMInt64TypeInContext(self.context);
-                    llvm::core::LLVMConstInt(int_type, n.clone() as u64, 0)
-                }
-            },
-
-            UInt8(ref n) => {
-                unsafe {
-                    let uint_type = llvm::core::LLVMInt8TypeInContext(self.context);
-                    llvm::core::LLVMConstInt(uint_type, n.clone() as u64, 1)
-                }
-            },
-            UInt16(ref n) => {
-                unsafe {
-                    let uint_type = llvm::core::LLVMInt16TypeInContext(self.context);
-                    llvm::core::LLVMConstInt(uint_type, n.clone() as u64, 1)
-                }
-            },
-            UInt32(ref n) => {
-                unsafe {
-                    let uint_type = llvm::core::LLVMInt32TypeInContext(self.context);
-                    llvm::core::LLVMConstInt(uint_type, n.clone() as u64, 1)
-                }
-            },
-            UInt64(ref n) => {
-                unsafe {
-                    let uint_type = llvm::core::LLVMInt64TypeInContext(self.context);
-                    llvm::core::LLVMConstInt(uint_type, n.clone() as u64, 1)
-                }
-            },
-
-            Float(ref n) => {
-                unsafe {
-                    let float_type = llvm::core::LLVMFloatTypeInContext(self.context);
-                    llvm::core::LLVMConstReal(float_type, n.clone())
-                }
-            },
-            Double(ref n) => {
-                unsafe {
-                    let double_type = llvm::core::LLVMDoubleTypeInContext(self.context);
-                    llvm::core::LLVMConstReal(double_type, n.clone())
-                }
-            },
+            }
+            String(ref str) => {
+                panic!("unimplemented!")
+            }
         }
     }
 }
@@ -260,25 +188,16 @@ impl Drop for Builder {
     }
 }
 
-#[test]
-fn test() {
-    let builder = Builder::new("test");
-    builder.module(&ast::Module{
-        functions: vec![
-            ast::Function {
-                name: "main".to_string(),
-                arguments: vec![("a".to_string(), ast::Type::Int8)],
-                return_type: ast::Type::Int16,
-                body: vec![
-                    ast::Statement::Return(
-                        ast::Expression::Add(
-                            box ast::Expression::Literal(ast::Literal::Int32(4)),
-                            box ast::Expression::Add(
-                                box ast::Expression::Literal(ast::Literal::Int32(3)),
-                                box ast::Expression::Literal(ast::Literal::Int32(5)))))
-                ]
-            }
-        ]
-    }).unwrap();
+fn convert_to_llvm(op: &ast::BinaryOperator) -> Result<llvm::LLVMIntPredicate, String> {
+    use ast::BinaryOperator::*;
+    Ok(match *op {
+        Equal => llvm::LLVMIntPredicate::LLVMIntEQ,
+        NotEqual => llvm::LLVMIntPredicate::LLVMIntNE,
+        Greater => llvm::LLVMIntPredicate::LLVMIntSGT,
+        GreaterEqual => llvm::LLVMIntPredicate::LLVMIntSGE,
+        Less => llvm::LLVMIntPredicate::LLVMIntSLT,
+        LessEqual => llvm::LLVMIntPredicate::LLVMIntSLE,
+        _ => Err(format!("non compare expr: {:?}", *op))?,
+    })
 }
 
