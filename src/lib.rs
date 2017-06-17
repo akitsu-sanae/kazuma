@@ -27,12 +27,57 @@ pub struct Builder {
     builder: LBuilder,
 }
 
+fn char_literal(ch: u8, context: &LContext) -> LValue {
+    unsafe {
+        let char_ty = llvm::core::LLVMInt8TypeInContext(*context);
+        llvm::core::LLVMConstInt(char_ty, ch as u64, 0)
+    }
+}
+
+fn str_literal(str: &str, context: &LContext) -> LValue {
+    let mut bytes: Vec<_> = str.bytes()
+        .map(|ch| char_literal(ch, context))
+        .collect();
+    bytes.push(char_literal(0, context));
+    unsafe {
+        let char_ty = llvm::core::LLVMInt8TypeInContext(*context);
+        llvm::core::LLVMConstArray(char_ty, bytes.as_mut_ptr(), bytes.len() as std::os::raw::c_uint)
+    }
+}
+
+fn setup(context: &mut LContext, module: &mut LModule, builder: &mut LBuilder) {
+    // printf
+    unsafe {
+        let print_name = CString::new("printf").unwrap();
+        let int_ty = llvm::core::LLVMInt32TypeInContext(*context);
+        let mut args = vec![
+            llvm::core::LLVMPointerType(
+                llvm::core::LLVMInt8TypeInContext(*context), 0)
+        ];
+        let printf_ty = llvm::core::LLVMFunctionType(int_ty, args.as_mut_ptr(), 1, 1);
+        llvm::core::LLVMAddFunction(*module, print_name.as_ptr(), printf_ty);
+    }
+
+    // "%d\n" as format string
+    let printf_format_name = CString::new(".buildin.printf.format.num").unwrap();
+    let init = str_literal("%d\n", context);
+    unsafe {
+        let global = llvm::core::LLVMAddGlobal(
+            *module,
+            llvm::core::LLVMTypeOf(init),
+            printf_format_name.as_ptr());
+        llvm::core::LLVMSetInitializer(global, init);
+    }
+}
+
+
 impl Builder {
     pub fn new(name: &str) -> Self {
         unsafe {
-            let context = llvm::core::LLVMContextCreate();
-            let module = llvm::core::LLVMModuleCreateWithName(name.as_ptr() as *const _);
-            let builder = llvm::core::LLVMCreateBuilderInContext(context);
+            let mut context = llvm::core::LLVMContextCreate();
+            let mut module = llvm::core::LLVMModuleCreateWithName(name.as_ptr() as *const _);
+            let mut builder = llvm::core::LLVMCreateBuilderInContext(context);
+            setup(&mut context, &mut module, &mut builder);
             Builder {
                 context: context,
                 module: module,
