@@ -27,6 +27,13 @@ pub struct Builder {
     builder: LBuilder,
 }
 
+fn int_literal(n: i32, context: &LContext) -> LValue {
+    unsafe {
+        let int_ty = llvm::core::LLVMInt32TypeInContext(*context);
+        llvm::core::LLVMConstInt(int_ty, n as u64, 0)
+    }
+}
+
 fn char_literal(ch: u8, context: &LContext) -> LValue {
     unsafe {
         let char_ty = llvm::core::LLVMInt8TypeInContext(*context);
@@ -138,8 +145,18 @@ impl Builder {
             Print(box ref e) => {
                 let value = self.expression(e, env);
                 unsafe {
-                    let printf = llvm::core::LLVMGetNamedFunction(self.module, "printf".as_ptr() as *const i8);
-                    let format_ptr = llvm::core::LLVMGetNamedGlobal(self.module, ".buildin.printf.format.numbr".as_ptr() as *const i8);
+                    let printf_name = CString::new("printf").unwrap();
+                    let printf = llvm::core::LLVMGetNamedFunction(self.module, printf_name.as_ptr());
+                    let format_name = CString::new(".buildin.printf.format.num").unwrap();
+                    let format = llvm::core::LLVMGetNamedGlobal(self.module, format_name.as_ptr());
+                    let format_ptr_name = CString::new("gep").unwrap();
+                    let mut indices = vec![int_literal(0, &self.context), int_literal(0, &self.context)];
+                    let format_ptr = llvm::core::LLVMBuildGEP(
+                        self.builder,
+                        format,
+                        indices.as_mut_ptr(),
+                        indices.len() as std::os::raw::c_uint,
+                        format_ptr_name.as_ptr());
                     let mut args = vec![format_ptr, value];
                     let ret_name = CString::new("ret").unwrap();
                     llvm::core::LLVMBuildCall(
