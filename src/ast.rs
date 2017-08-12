@@ -5,9 +5,18 @@
   file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
 ============================================================================*/
 
+use std::collections::HashMap;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Module {
+    pub structs: Vec<Struct>,
     pub functions: Vec<Function>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Struct {
+    pub name: String,
+    pub fields: HashMap<String, Type>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -58,6 +67,7 @@ pub enum Expression {
 
     Bool(bool),
     Int(i64),
+    Struct(String, HashMap<String, Expression>),
 }
 
 

@@ -18,13 +18,20 @@ type LBuilder = llvm::prelude::LLVMBuilderRef;
 type LType = llvm::prelude::LLVMTypeRef;
 type LValue = llvm::prelude::LLVMValueRef;
 
+type Env = HashMap<String, Data>;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum Data {
+    Value(LValue),
+    Type(LType),
+}
+
 pub struct Builder {
     context: LContext,
     module: LModule,
     builder: LBuilder,
+    env: Env,
 }
-
-type Env = HashMap<String, LValue>;
 
 impl Builder {
 
@@ -37,16 +44,21 @@ impl Builder {
                 context: context,
                 module: module,
                 builder: builder,
+                env: Env::new(),
             }
         }
     }
 
 
-    pub fn build(&self, module: &ast::Module) -> Result<String, String> {
+    pub fn build(&mut self, module: &ast::Module) -> Result<String, String> {
         self.build_module(module)
     }
 
-    fn build_module(&self, module: &ast::Module) -> Result<String, String> {
+    fn build_module(&mut self, module: &ast::Module) -> Result<String, String> {
+        for strct in module.structs.iter() {
+            self.build_struct(strct)?;
+        }
+
         for func in module.functions.iter() {
             self.build_function(func)?;
         }
@@ -81,6 +93,19 @@ impl Builder {
         }
     }
 
+    fn build_struct(&mut self, strct: &ast::Struct) -> Result<LType, String> {
+        unsafe {
+            let name = strct.name.as_str().as_ptr() as *const _;
+            let struct_ty = llvm::core::LLVMStructCreateNamed(self.context, name);
+            let fields: Result<Vec<_>, String> = strct.fields.iter().map(|(_, ref field)| self.build_type(field)).collect();
+            let mut fields = fields?;
+            llvm::core::LLVMStructSetBody(struct_ty, fields.as_mut_ptr(), fields.len() as u32, 0);
+            self.env.insert(strct.name.clone(), Data::Type(struct_ty));
+            Ok(struct_ty)
+
+        }
+    }
+
     fn build_function(&self, func: &ast::Function) -> Result<LValue, String> {
         unsafe {
             let func_name = func.name.as_str().as_ptr() as *const _;
@@ -88,7 +113,7 @@ impl Builder {
             let function = llvm::core::LLVMAddFunction(self.module, func_name, func_type);
             let block = llvm::core::LLVMAppendBasicBlockInContext(self.context, function, b"entry\0".as_ptr() as *const _);
             llvm::core::LLVMPositionBuilderAtEnd(self.builder, block);
-            let ret_value = self.build_expression(&func.body, &mut Env::new())?;
+            let ret_value = self.build_expression(&func.body, &mut self.env.clone())?;
             Ok(llvm::core::LLVMBuildRet(self.builder, ret_value))
         }
     }
@@ -99,7 +124,7 @@ impl Builder {
         match *expr {
             Let(ref name, box ref init) => {
                 let init = self.build_expression(init, env)?;
-                env.insert(name.clone(), init);
+                env.insert(name.clone(), Data::Value(init));
                 let name = name.as_ptr() as *const i8;
                 unsafe {
                     let typ = llvm::core::LLVMTypeOf(init);
@@ -107,7 +132,13 @@ impl Builder {
                     Ok(llvm::core::LLVMBuildStore(self.builder, init, stack))
                 }
             },
-            Variable(ref name) => env.get(name).cloned().ok_or(format!("unbound variable: {}", name)),
+            Variable(ref name) => {
+                match env.get(name).cloned() {
+                    Some(Data::Value(val)) => Ok(val),
+                    Some(Data::Type(ty)) => Err(format!("{} is type {:?}, not value", name, ty)),
+                    None => Err(format!("unbound variable: {} in {:?}", name, env)),
+                }
+            },
             Assign(box ref lhs, box ref rhs) => {
                 let lhs = self.build_expression(lhs, env)?;
                 let rhs = self.build_expression(rhs, env)?;
@@ -216,6 +247,19 @@ impl Builder {
                 let int_ty = self.build_type(&ast::Type::Int32)?;
                 unsafe {
                     Ok(llvm::core::LLVMConstInt(int_ty, *n as u64, 0))
+                }
+            },
+            Struct(ref name, ref fields) => {
+                match env.get(name).cloned() {
+                    Some(Data::Type(ty)) => {
+                        let fields: Result<Vec<_>, _> = fields.iter().map(|(_, ref field)| self.build_expression(field, env)).collect();
+                        let mut fields = fields?;
+                        unsafe {
+                            Ok(llvm::core::LLVMConstNamedStruct(ty, fields.as_mut_ptr(), fields.len() as u32))
+                        }
+                    },
+                    Some(Data::Value(val)) => Err(format!("{} is value {:?}, not type", name, val)),
+                    None => Err(format!("unbound type name: {}", name)),
                 }
             },
         }
