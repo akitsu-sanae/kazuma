@@ -249,6 +249,12 @@ impl Builder {
                     Ok(llvm::core::LLVMConstInt(int_ty, *n as u64, 0))
                 }
             },
+            Array(ref exprs) => unsafe {
+                let exprs :Result<Vec<_>, _> = exprs.iter().map(|x| self.build_expression(x, env)).collect();
+                let mut exprs = exprs?;
+                let ty = llvm::core::LLVMTypeOf(exprs[0]);
+                Ok(llvm::core::LLVMConstArray(ty, exprs.as_mut_ptr(), exprs.len() as u32))
+            },
             Struct(ref name, ref fields) => {
                 match env.get(name).cloned() {
                     Some(Data::Type(ty)) => {

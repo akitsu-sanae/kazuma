@@ -34,7 +34,7 @@ pub enum Type {
     Int8, Int16, Int32, Int64,
     Float32, Float64,
     Pointer(Box<Type>),
-    Array(Box<Type>, i32),
+    Array(Box<Type>, i64),
     Function(Vec<Type>, Box<Type>),
     Struct(String)
 }
@@ -67,6 +67,7 @@ pub enum Expression {
 
     Bool(bool),
     Int(i64),
+    Array(Vec<Expression>),
     Struct(String, HashMap<String, Expression>),
 }
 
