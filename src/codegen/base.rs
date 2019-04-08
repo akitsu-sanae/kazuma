@@ -5,6 +5,7 @@ pub type LModule = llvm::prelude::LLVMModuleRef;
 pub type LBuilder = llvm::prelude::LLVMBuilderRef;
 pub type LType = llvm::prelude::LLVMTypeRef;
 pub type LValue = llvm::prelude::LLVMValueRef;
+pub type LBasicBlock = llvm::prelude::LLVMBasicBlockRef;
 
 pub struct Base {
     pub context: LContext,

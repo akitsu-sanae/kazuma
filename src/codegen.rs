@@ -18,11 +18,7 @@ pub use self::util::*;
 pub fn generate(module: Module) -> String {
     let mut base = Base::new(&module);
     apply_module(module, &mut base);
-    unsafe {
-        let ir = llvm::core::LLVMPrintModuleToString(base.module);
-        let len = libc::strlen(ir);
-        String::from_raw_parts(ir as *mut u8, len+1, len+1)
-    }
+    util::print_module(base.module)
 }
 
 fn apply_module(module: Module, base: &mut Base) {
@@ -42,24 +38,19 @@ fn apply_type(typ: &Type, context: LContext) -> LType {
 }
 
 fn apply_funcs(func: Func, base: &mut Base) {
-    unsafe {
     let mut param_types = func.args.iter()
         .map(|&(_, ref ty)| apply_type(ty, base.context))
         .collect();
     let func_typ = typ::func(&mut param_types, apply_type(&func.ret_type, base.context));
-    let func_ll = llvm::core::LLVMAddFunction(base.module, func.name.as_str().as_ptr() as *const _, func_typ);
+    let gen_func = util::add_function(base.module, &func.name, func_typ);
     let mut env = HashMap::new();
     for (i, arg) in func.args.into_iter().enumerate() {
-        let param = llvm::core::LLVMGetParam(func_ll, i as libc::c_uint);
-        env.insert(arg.0.clone(), param);
-        let param_name = CString::new(arg.0.as_str()).unwrap();
-        llvm::core::LLVMSetValueName(param, param_name.as_ptr());
+        util::set_func_param(i, arg.0, gen_func, &mut env);
     }
-    let block = llvm::core::LLVMAppendBasicBlockInContext(base.context, func_ll, b"entry\0".as_ptr() as *const _);
-    llvm::core::LLVMPositionBuilderAtEnd(base.builder, block);
+    let block = util::add_entry_block(gen_func, base);
+
     for statement in func.body {
         apply_statement(statement, &env, base);
-    }
     }
 }
 
