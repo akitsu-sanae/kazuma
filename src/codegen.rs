@@ -31,9 +31,9 @@ fn apply_module(module: Module, base: &mut Base) {
     }
 }
 
-fn apply_typ(ty: &Type, context: LContext) -> LType {
+fn apply_type(typ: &Type, context: LContext) -> LType {
     use Type::*;
-    match ty {
+    match typ {
         Bool => typ::bool(context),
         Char => typ::char(context),
         Int => typ::int32(context),
@@ -44,9 +44,9 @@ fn apply_typ(ty: &Type, context: LContext) -> LType {
 fn apply_funcs(func: Func, base: &mut Base) {
     unsafe {
     let mut param_types = func.args.iter()
-        .map(|&(_, ref ty)| apply_typ(ty, base.context))
+        .map(|&(_, ref ty)| apply_type(ty, base.context))
         .collect();
-    let func_typ = typ::func(&mut param_types, apply_typ(&func.ret_typ, base.context));
+    let func_typ = typ::func(&mut param_types, apply_type(&func.ret_type, base.context));
     let func_ll = llvm::core::LLVMAddFunction(base.module, func.name.as_str().as_ptr() as *const _, func_typ);
     let mut env = HashMap::new();
     for (i, arg) in func.args.into_iter().enumerate() {
@@ -67,7 +67,7 @@ fn apply_statement(statement: Statement, env: &HashMap<String, LValue>, base: &m
     use Statement::*;
     match statement {
         Declare(var, typ, init) => {
-            let typ = apply_typ(&typ, base.context);
+            let typ = apply_type(&typ, base.context);
             let init = apply_expr(init, env, base);
             build::declare(&var, typ, init, &mut base.builder);
         },

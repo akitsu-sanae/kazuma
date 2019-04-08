@@ -25,7 +25,7 @@ fn build_function_test() {
         funcs: vec!(Func {
             name: "main".to_string(),
             args: vec!(),
-            ret_typ: Type::Int,
+            ret_type: Type::Int,
             body: vec!()
         }),
     };
@@ -39,7 +39,7 @@ fn build_ret_function_test() {
         funcs: vec!(Func {
             name: "main".to_string(),
             args: vec!(),
-            ret_typ: Type::Int,
+            ret_type: Type::Int,
             body: vec!(Statement::Return(Expr::Literal(Literal::Int(42)))),
         }),
     };
@@ -53,7 +53,7 @@ fn build_binop_expr_test() {
         funcs: vec!(Func {
             name: "main".to_string(),
             args: vec!(),
-            ret_typ: Type::Int,
+            ret_type: Type::Int,
             body: vec!(Statement::Return(Expr::BinOp(
                         BinOp::Add,
                         box Expr::Literal(Literal::Int(114)),

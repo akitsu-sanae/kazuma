@@ -25,7 +25,7 @@ pub enum Type {
 pub struct Func {
     pub name: String,
     pub args: Vec<(String, Type)>,
-    pub ret_typ: Type,
+    pub ret_type: Type,
     pub body: Vec<Statement>,
 }
 
