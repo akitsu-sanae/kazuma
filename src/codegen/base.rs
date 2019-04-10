@@ -17,10 +17,10 @@ impl Base {
     pub fn new(module: &Module) -> Base {
         unsafe {
             let context = llvm::core::LLVMContextCreate();
-            let mut module = llvm::core::LLVMModuleCreateWithName(module.name.as_ptr() as *const _);
+            let module = llvm::core::LLVMModuleCreateWithName(module.name.as_ptr() as *const _);
             let builder = llvm::core::LLVMCreateBuilderInContext(context);
 
-            self::add_buildin(context, &mut module);
+            self::add_buildin(context, module);
             Base {
                 context, module, builder
             }
@@ -39,26 +39,26 @@ impl Drop for Base {
     }
 }
 
-fn add_buildin(context: LContext, module: &mut LModule) {
+fn add_buildin(context: LContext, module: LModule) {
     add_printf_function(context, module);
     add_num_format_str(context, module);
 }
 
-fn add_printf_function(context: LContext, module: &mut LModule) {
+fn add_printf_function(context: LContext, module: LModule) {
     let name = CString::new("printf").unwrap();
     let typ = typ::variadic_func(
         &mut vec!(typ::char_ptr(context)),
         typ::int32(context));
     unsafe {
-        llvm::core::LLVMAddFunction(*module, name.as_ptr(), typ);
+        llvm::core::LLVMAddFunction(module, name.as_ptr(), typ);
     }
 }
 
-fn add_num_format_str(context: LContext, module: &LModule) {
+fn add_num_format_str(context: LContext, module: LModule) {
     let num_format_str = CString::new(".buildin.format.num").unwrap();
     let init = lit::str("%d", context);
     unsafe {
-        let global_var = llvm::core::LLVMAddGlobal(*module, typ::type_of(init), num_format_str.as_ptr());
+        let global_var = llvm::core::LLVMAddGlobal(module, typ::type_of(init), num_format_str.as_ptr());
         llvm::core::LLVMSetInitializer(global_var, init);
     }
 }

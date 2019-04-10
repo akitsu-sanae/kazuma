@@ -16,12 +16,12 @@ pub use self::build::*;
 pub use self::util::*;
 
 pub fn generate(module: Module) -> String {
-    let mut base = Base::new(&module);
-    apply_module(module, &mut base);
+    let base = Base::new(&module);
+    apply_module(module, &base);
     util::print_module(base.module)
 }
 
-fn apply_module(module: Module, base: &mut Base) {
+fn apply_module(module: Module, base: &Base) {
     for func in module.funcs {
         apply_funcs(func, base);
     }
@@ -37,7 +37,7 @@ fn apply_type(typ: &Type, context: LContext) -> LType {
     }
 }
 
-fn apply_funcs(func: Func, base: &mut Base) {
+fn apply_funcs(func: Func, base: &Base) {
     let mut param_types = func.args.iter()
         .map(|&(_, ref ty)| apply_type(ty, base.context))
         .collect();
@@ -54,33 +54,33 @@ fn apply_funcs(func: Func, base: &mut Base) {
     }
 }
 
-fn apply_statement(statement: Statement, env: &HashMap<String, LValue>, base: &mut Base) {
+fn apply_statement(statement: Statement, env: &HashMap<String, LValue>, base: &Base) {
     use Statement::*;
     match statement {
         Declare(var, typ, init) => {
             let typ = apply_type(&typ, base.context);
             let init = apply_expr(init, env, base);
-            build::declare(&var, typ, init, &mut base.builder);
+            build::declare(&var, typ, init, base.builder);
         },
         Assign(var, expr) => {
             let var = *env.get(&var).unwrap();
             let expr = apply_expr(expr, env, base);
-            build::store(var, expr, &mut base.builder);
+            build::store(var, expr, base.builder);
         },
         Return(expr) => {
             let expr = apply_expr(expr, env, base);
-            build::ret(expr, &mut base.builder)
+            build::ret(expr, base.builder)
         }
-        ReturnVoid => build::ret_void(&mut base.builder),
+        ReturnVoid => build::ret_void(base.builder),
         _ => unimplemented!(),
     }
 }
 
-fn apply_expr(expr: Expr, env: &HashMap<String, LValue>, base: &mut Base) -> LValue {
+fn apply_expr(expr: Expr, env: &HashMap<String, LValue>, base: &Base) -> LValue {
     use Expr::*;
     match expr {
         Var(name) => {
-            build::load(&name, env, &mut base.builder).unwrap()
+            build::load(&name, env, base.builder).unwrap()
         },
         Literal(lit) => apply_literal(lit, base),
         BinOp(op, box lhs, box rhs) => apply_binop_expr(op, lhs, rhs, env, base),
@@ -88,20 +88,20 @@ fn apply_expr(expr: Expr, env: &HashMap<String, LValue>, base: &mut Base) -> LVa
     }
 }
 
-fn apply_binop_expr(op: BinOp, lhs: Expr, rhs: Expr, env: &HashMap<String, LValue>, base: &mut Base) -> LValue {
+fn apply_binop_expr(op: BinOp, lhs: Expr, rhs: Expr, env: &HashMap<String, LValue>, base: &Base) -> LValue {
     use BinOp::*;
     let lhs = apply_expr(lhs, env, base);
     let rhs = apply_expr(rhs, env, base);
     match op {
-        Add => build::add(lhs, rhs, &mut base.builder),
-        Sub => build::sub(lhs, rhs, &mut base.builder),
-        Mult => build::mult(lhs, rhs, &mut base.builder),
-        Div => build::div(lhs, rhs, &mut base.builder),
+        Add => build::add(lhs, rhs, base.builder),
+        Sub => build::sub(lhs, rhs, base.builder),
+        Mult => build::mult(lhs, rhs, base.builder),
+        Div => build::div(lhs, rhs, base.builder),
         _ => unimplemented!(),
     }
 }
 
-fn apply_literal(lit: Literal, base: &mut Base) -> LValue {
+fn apply_literal(lit: Literal, base: &Base) -> LValue {
     use Literal::*;
     match lit {
         Int(n) => lit::int32(n, base.context),
