@@ -1,6 +1,12 @@
 use super::*;
 use llvm::core::*;
 
+pub fn void(context: LContext) -> LType {
+    unsafe {
+        LLVMVoidTypeInContext(context)
+    }
+}
+
 pub fn bool(context: LContext) -> LType {
     unsafe {
         LLVMInt1TypeInContext(context)

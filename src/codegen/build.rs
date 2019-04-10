@@ -29,6 +29,12 @@ pub fn ret(value: LValue, builder: &mut LBuilder) {
     }
 }
 
+pub fn ret_void(builder: &mut LBuilder) {
+    unsafe {
+        LLVMBuildRetVoid(*builder);
+    }
+}
+
 pub fn add(lhs: LValue, rhs: LValue, builder: &mut LBuilder) -> LValue {
     let result = fresh_name();
     unsafe {

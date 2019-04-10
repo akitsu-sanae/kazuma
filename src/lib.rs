@@ -34,6 +34,7 @@ pub enum Statement {
     Declare(String, Type, Expr),
     Assign(String, Expr),
     Return(Expr),
+    ReturnVoid,
     Expr(Expr),
 }
 

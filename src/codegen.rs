@@ -71,6 +71,7 @@ fn apply_statement(statement: Statement, env: &HashMap<String, LValue>, base: &m
             let expr = apply_expr(expr, env, base);
             build::ret(expr, &mut base.builder)
         }
+        ReturnVoid => build::ret_void(&mut base.builder),
         _ => unimplemented!(),
     }
 }
