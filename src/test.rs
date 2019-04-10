@@ -6,7 +6,10 @@ use super::*;
 #[cfg(test)]
 fn output(module: Module, filename: &str) {
     let mut f = fs::File::create(&format!("./test/{}", filename)).unwrap();
-    write!(f, "{}", gencode(module).unwrap()).unwrap();
+    match gencode(module) {
+        Ok(code) => write!(f, "{}", code).unwrap(),
+        Err(err) => panic!("{}", err),
+    }
 }
 
 #[test]
@@ -25,8 +28,8 @@ fn build_function_test() {
         funcs: vec!(Func {
             name: "main".to_string(),
             args: vec!(),
-            ret_type: Type::Int,
-            body: vec!()
+            ret_type: Type::Void,
+            body: vec!(Statement::ReturnVoid),
         }),
     };
     output(module, "function_test.ll")

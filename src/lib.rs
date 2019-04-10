@@ -18,7 +18,7 @@ pub struct Module {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
-    Bool, Char, Int, String,
+    Void, Bool, Char, Int, String,
 }
 
 #[derive(Debug, Clone, PartialEq)]

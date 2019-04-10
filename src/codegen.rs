@@ -42,7 +42,7 @@ impl Error for CodegenError {
 pub fn generate(module: Module) -> Result<String, CodegenError> {
     let base = Base::new(&module);
     apply_module(module, &base)?;
-    // util::validate_module(base.module)?;
+    util::validate_module(base.module)?;
     util::print_module(base.module)
 }
 
@@ -56,6 +56,7 @@ fn apply_module(module: Module, base: &Base) -> Result<(), CodegenError> {
 fn apply_type(typ: &Type, context: LContext) -> LType {
     use Type::*;
     match typ {
+        Void => typ::void(context),
         Bool => typ::bool(context),
         Char => typ::char(context),
         Int => typ::int32(context),

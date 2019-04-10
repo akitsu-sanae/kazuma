@@ -3,6 +3,24 @@ use std::sync::RwLock;
 
 use super::*;
 
+pub fn validate_module(module: LModule) -> Result<(), CodegenError> {
+    use llvm::analysis::*;
+    let mut err_msg = 0 as *mut i8;
+    let buf: *mut *mut i8 = &mut err_msg;
+    let ok = unsafe {
+        LLVMVerifyModule(
+            module,
+            LLVMVerifierFailureAction::LLVMReturnStatusAction,
+            buf)
+    };
+    if ok != 0  {
+        let msg_str = unsafe { CString::from_raw(err_msg).into_string().unwrap() };
+        Err(CodegenError::ModuleValidation(msg_str))
+    } else {
+        Ok(())
+    }
+}
+
 pub fn print_module(module: LModule) -> Result<String, CodegenError> {
     unsafe {
         let ir = LLVMPrintModuleToString(module);

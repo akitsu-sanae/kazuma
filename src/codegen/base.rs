@@ -17,7 +17,7 @@ impl Base {
     pub fn new(module: &Module) -> Base {
         unsafe {
             let context = llvm::core::LLVMContextCreate();
-            let module = llvm::core::LLVMModuleCreateWithName(module.name.as_ptr() as *const _);
+            let module = llvm::core::LLVMModuleCreateWithNameInContext(module.name.as_ptr() as *const _, context);
             let builder = llvm::core::LLVMCreateBuilderInContext(context);
 
             self::add_buildin(context, module);
