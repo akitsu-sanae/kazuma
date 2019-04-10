@@ -64,7 +64,7 @@ pub enum Literal {
     Array(Vec<Literal>, Type),
 }
 
-pub fn gencode(module: Module) -> String {
+pub fn gencode(module: Module) -> Result<String, codegen::CodegenError> {
     codegen::generate(module)
 }
 

@@ -15,11 +15,10 @@ pub fn store(var: LValue, expr: LValue, builder: LBuilder) -> LValue {
     }
 }
 
-pub fn load(name: &String, env: &HashMap<String, LValue>, builder: LBuilder) -> Result<LValue, ()> {
-    let var = env.get(name).unwrap();
-    let name = CString::new(name.as_str()).unwrap();
+pub fn load(var: LValue, builder: LBuilder) -> LValue {
+    let name = CString::new(util::fresh_name().as_str()).unwrap();
     unsafe {
-        Ok(LLVMBuildLoad(builder, *var, name.as_ptr()))
+        LLVMBuildLoad(builder, var, name.as_ptr())
     }
 }
 

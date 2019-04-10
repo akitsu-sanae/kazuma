@@ -6,7 +6,7 @@ use super::*;
 #[cfg(test)]
 fn output(module: Module, filename: &str) {
     let mut f = fs::File::create(&format!("./test/{}", filename)).unwrap();
-    write!(f, "{}", gencode(module)).unwrap();
+    write!(f, "{}", gencode(module).unwrap()).unwrap();
 }
 
 #[test]

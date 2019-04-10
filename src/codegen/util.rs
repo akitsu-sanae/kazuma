@@ -3,11 +3,12 @@ use std::sync::RwLock;
 
 use super::*;
 
-pub fn print_module(module: LModule) -> String {
+pub fn print_module(module: LModule) -> Result<String, CodegenError> {
     unsafe {
         let ir = LLVMPrintModuleToString(module);
         let len = libc::strlen(ir);
-        String::from_raw_parts(ir as *mut u8, len+1, len+1)
+        let result = String::from_raw_parts(ir as *mut u8, len+1, len+1);
+        Ok(result)
     }
 }
 
