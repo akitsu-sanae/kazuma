@@ -66,3 +66,20 @@ fn build_binop_expr_test() {
     output(module, "binop_expr_test.ll")
 }
 
+#[test]
+fn build_if_expr_test() {
+    let module = Module {
+        name: "test".to_string(),
+        funcs: vec!(Func {
+            name: "main".to_string(),
+            args: vec!(),
+            ret_type: Type::Int,
+            body: vec!(Statement::Return(Expr::If(
+                        box Expr::Literal(Literal::Bool(true)),
+                        box Expr::Literal(Literal::Int(114)),
+                        box Expr::Literal(Literal::Int(514))))),
+        }),
+    };
+    output(module, "if_expr_test.ll")
+}
+

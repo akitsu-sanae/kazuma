@@ -49,6 +49,7 @@ pub enum BinOp {
 pub enum Expr {
     Var(String),
     BinOp(BinOp, Box<Expr>, Box<Expr>),
+    If(Box<Expr>, Box<Expr>, Box<Expr>),
     Call(Box<Expr>, Vec<Expr>),
     Literal(Literal),
 

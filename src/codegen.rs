@@ -121,6 +121,7 @@ fn apply_expr(expr: Expr, env: &HashMap<String, LValue>, base: &Base) -> Result<
         },
         Literal(lit) => apply_literal(lit, base),
         BinOp(op, box lhs, box rhs) => apply_binop_expr(op, lhs, rhs, env, base),
+        If(box cond, box then, box else_) => apply_if_expr(cond, then, else_, env, base),
         _ => unimplemented!(),
     }
 }
@@ -138,9 +139,36 @@ fn apply_binop_expr(op: BinOp, lhs: Expr, rhs: Expr, env: &HashMap<String, LValu
     }
 }
 
+fn apply_if_expr(cond: Expr, then: Expr, else_: Expr, env: &HashMap<String, LValue>, base: &Base) -> Result<LValue, CodegenError> {
+    let cond = apply_expr(cond, env, base)?;
+    let insertion_block = util::insertion_block(base.builder);
+    let then_block = append_block("if_then", insertion_block, base);
+    let else_block = append_block("if_else", then_block, base);
+    let merge_block = append_block("if_merge", else_block, base);
+
+    build::cond_branch(cond, then_block, else_block, base.builder);
+
+    // code generation for then-block
+    util::position_at_end(then_block, base.builder);
+    let then = apply_expr(then, env, base)?;
+    build::branch(merge_block, base.builder);
+    let then_block = util::insertion_block(base.builder);
+
+    // code generation for else-block
+    util::position_at_end(else_block, base.builder);
+    let else_ = apply_expr(else_, env, base)?;
+    build::branch(merge_block, base.builder);
+    let else_block = util::insertion_block(base.builder);
+
+    // code generation for merge-block
+    util::position_at_end(merge_block, base.builder);
+    Ok(build::phi(typ::type_of(then), vec!((then, then_block), (else_, else_block)), base.builder))
+}
+
 fn apply_literal(lit: Literal, base: &Base) -> Result<LValue, CodegenError> {
     use Literal::*;
     match lit {
+        Bool(b) => Ok(lit::bool(b, base.context)),
         Int(n) => Ok(lit::int32(n, base.context)),
         _ => unimplemented!(),
     }

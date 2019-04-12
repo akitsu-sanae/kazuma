@@ -1,4 +1,5 @@
 use llvm::core::*;
+use std::collections::HashMap;
 use std::sync::RwLock;
 
 use super::*;
@@ -53,13 +54,55 @@ pub fn add_entry_block(func: LValue, base: &Base) -> LBasicBlock {
     }
 }
 
-pub fn fresh_name() -> String {
-    let mut name_n = NAME_NUMBER.write().unwrap();
-    *name_n += 1;
-    format!(".generated.name.{}", *name_n)
+pub fn position_at_end(block: LBasicBlock, builder: LBuilder) {
+    unsafe {
+        LLVMPositionBuilderAtEnd(builder, block);
+    }
+}
+
+pub fn insertion_block(builder: LBuilder) -> LBasicBlock {
+    unsafe {
+        LLVMGetInsertBlock(builder)
+    }
+}
+
+pub fn append_block(label: &str, prev_block: LBasicBlock, base: &Base) -> LBasicBlock {
+    let label = util::fresh_name(NameType::Label, label);
+    unsafe {
+        let f = LLVMGetBasicBlockParent(LLVMGetInsertBlock(base.builder));
+        let block = LLVMAppendBasicBlockInContext(base.context, f, label.as_ptr() as *const _);
+        LLVMMoveBasicBlockAfter(block, prev_block);
+        block
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum NameType {
+    Var, Label,
+}
+
+pub fn fresh_name(name_type: NameType, prefix: &str) -> String {
+    use self::NameType::*;
+    let typ = match name_type {
+        Var => "var",
+        Label => "label",
+    };
+
+    let mut name_counter = NAME_COUNTER.write().unwrap();
+    let count = match name_counter.get_mut(prefix) {
+        Some(count) => {
+            *count += 1;
+            *count
+        },
+        None => 0,
+    };
+    if count == 0 {
+        name_counter.insert(prefix.to_string(), 0);
+    }
+    format!(".generated.{}.{}.{}", typ, prefix, count)
 }
 
 lazy_static! {
-    static ref NAME_NUMBER: RwLock<i32> = RwLock::new(0);
+    static ref NAME_COUNTER: RwLock<HashMap<String, i32>> = RwLock::new(HashMap::new());
 }
 
