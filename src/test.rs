@@ -15,7 +15,7 @@ fn output(module: Module, filename: &str) {
 #[test]
 fn build_module_test() {
     let module = Module {
-        name: "test".to_string(),
+        name: "module".to_string(),
         funcs: vec!(),
     };
     output(module, "module_test.ll");
@@ -24,7 +24,7 @@ fn build_module_test() {
 #[test]
 fn build_function_test() {
     let module = Module {
-        name: "test".to_string(),
+        name: "empty function".to_string(),
         funcs: vec!(Func {
             name: "main".to_string(),
             args: vec!(),
@@ -38,7 +38,7 @@ fn build_function_test() {
 #[test]
 fn build_ret_function_test() {
     let module = Module {
-        name: "test".to_string(),
+        name: "ret function".to_string(),
         funcs: vec!(Func {
             name: "main".to_string(),
             args: vec!(),
@@ -52,7 +52,7 @@ fn build_ret_function_test() {
 #[test]
 fn build_binop_expr_test() {
     let module = Module {
-        name: "test".to_string(),
+        name: "binop expr".to_string(),
         funcs: vec!(Func {
             name: "main".to_string(),
             args: vec!(),
@@ -69,7 +69,7 @@ fn build_binop_expr_test() {
 #[test]
 fn build_if_expr_test() {
     let module = Module {
-        name: "test".to_string(),
+        name: "if expr".to_string(),
         funcs: vec!(Func {
             name: "main".to_string(),
             args: vec!(),

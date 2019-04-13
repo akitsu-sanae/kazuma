@@ -100,7 +100,7 @@ pub fn fresh_name(name_type: NameType, prefix: &str) -> CString {
     if count == 0 {
         name_counter.insert(prefix.to_string(), 0);
     }
-    CString::new(format!(".generated.{}.{}.{}", typ, prefix, count).as_bytes()).unwrap()
+    CString::new(format!(".gen.{}.{}.{}", typ, prefix, count).as_bytes()).unwrap()
 }
 
 pub mod i_know_what_i_do {
