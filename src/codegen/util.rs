@@ -32,8 +32,9 @@ pub fn print_module(module: LModule) -> Result<String, CodegenError> {
 }
 
 pub fn add_function(module: LModule, name: &str, typ: LType) -> LValue {
+    let name = CString::new(name.as_bytes()).unwrap();
     unsafe {
-        LLVMAddFunction(module, name.as_ptr() as *const _, typ)
+        LLVMAddFunction(module, name.as_ptr(), typ)
     }
 }
 
@@ -70,7 +71,7 @@ pub fn append_block(label: &str, prev_block: LBasicBlock, base: &Base) -> LBasic
     let label = util::fresh_name(NameType::Label, label);
     unsafe {
         let f = LLVMGetBasicBlockParent(LLVMGetInsertBlock(base.builder));
-        let block = LLVMAppendBasicBlockInContext(base.context, f, label.as_ptr() as *const _);
+        let block = LLVMAppendBasicBlockInContext(base.context, f, label.as_ptr());
         LLVMMoveBasicBlockAfter(block, prev_block);
         block
     }
@@ -81,7 +82,7 @@ pub enum NameType {
     Var, Label,
 }
 
-pub fn fresh_name(name_type: NameType, prefix: &str) -> String {
+pub fn fresh_name(name_type: NameType, prefix: &str) -> CString {
     use self::NameType::*;
     let typ = match name_type {
         Var => "var",
@@ -99,7 +100,14 @@ pub fn fresh_name(name_type: NameType, prefix: &str) -> String {
     if count == 0 {
         name_counter.insert(prefix.to_string(), 0);
     }
-    format!(".generated.{}.{}.{}", typ, prefix, count)
+    CString::new(format!(".generated.{}.{}.{}", typ, prefix, count).as_bytes()).unwrap()
+}
+
+pub mod i_know_what_i_do {
+    pub fn clear_name_counter() {
+        let mut name_counter = super::NAME_COUNTER.write().unwrap();
+        name_counter.clear();
+    }
 }
 
 lazy_static! {

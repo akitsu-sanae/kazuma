@@ -16,6 +16,7 @@ pub use self::build::*;
 pub use self::util::*;
 
 pub fn generate(module: Module) -> Result<String, CodegenError> {
+    i_know_what_i_do::clear_name_counter();
     let base = Base::new(&module);
     apply_module(module, &base)?;
     util::validate_module(base.module)?;
