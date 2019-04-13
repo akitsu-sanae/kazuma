@@ -85,10 +85,3 @@ pub fn phi(typ: LType, incoming: Vec<(LValue, LBasicBlock)>, builder: LBuilder) 
     }
 }
 
-pub fn compare_integer(lhs: LValue, rhs: LValue, op: LLVMIntPredicate, builder: LBuilder) -> LValue {
-    let name = fresh_name(NameType::Var, "icomp_ret");
-    unsafe {
-        LLVMBuildICmp(builder, op, lhs, rhs, name.as_str().as_ptr() as *const i8)
-    }
-}
-

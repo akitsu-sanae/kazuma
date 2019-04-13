@@ -6,8 +6,6 @@ mod util;
 
 use std::ffi::CString;
 use std::collections::HashMap;
-use std::error::Error;
-use std::fmt;
 
 use crate::*;
 
@@ -16,28 +14,6 @@ pub use self::typ::*;
 pub use self::lit::*;
 pub use self::build::*;
 pub use self::util::*;
-
-#[derive(Debug)]
-pub enum CodegenError {
-    ModuleBuilding(String),
-    ModuleValidation(String),
-}
-
-impl fmt::Display for CodegenError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use self::CodegenError::*;
-        match self {
-            ModuleBuilding(ref msg) => write!(f, "module building error: {}", msg),
-            ModuleValidation(ref msg) => write!(f, "module validation error: {}", msg),
-        }
-    }
-}
-
-impl Error for CodegenError {
-    fn description(&self) -> &str {
-        "code generation error"
-    }
-}
 
 pub fn generate(module: Module) -> Result<String, CodegenError> {
     let base = Base::new(&module);
@@ -61,6 +37,7 @@ fn apply_type(typ: &Type, context: LContext) -> LType {
         Char => typ::char(context),
         Int => typ::int32(context),
         String => typ::char_ptr(context),
+        Func(_, _) => unimplemented!(),
     }
 }
 
