@@ -87,8 +87,11 @@ fn apply_statement(statement: Statement, env: &mut HashMap<String, LValue>, base
         ReturnVoid => {
             build::ret_void(base.builder);
             Ok(())
-        }
-        _ => unimplemented!(),
+        },
+        Expr(expr) => {
+            apply_expr(expr, env, base)?;
+            Ok(())
+        },
     }
 }
 
