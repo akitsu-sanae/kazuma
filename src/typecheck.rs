@@ -12,6 +12,10 @@ pub fn check(module: &Module) -> Result<(), CodegenError> {
     }
 
     for func in &module.funcs {
+        let mut env = env.clone();
+        for (var, typ) in func.args.iter() {
+            env.insert(var.clone(), typ.clone());
+        }
         check_body(&func.body, &mut env)?;
     }
     Ok(())
