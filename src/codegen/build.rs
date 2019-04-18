@@ -3,10 +3,12 @@ use super::*;
 use llvm::core::*;
 
 pub fn declare(name: &str, typ: LType, init: LValue, builder: LBuilder) -> LValue {
-    unsafe {
-        let var = LLVMBuildAlloca(builder, typ, name.as_ptr() as *const _);
-        LLVMBuildStore(builder, init, var)
-    }
+    let name = cstring(name);
+     unsafe {
+        let var = LLVMBuildAlloca(builder, typ, name.as_ptr());
+        self::store(var, init, builder);
+        var
+     }
 }
 
 pub fn store(var: LValue, expr: LValue, builder: LBuilder) -> LValue {

@@ -48,25 +48,28 @@ fn apply_funcs(func: Func, base: &Base) -> Result<(), CodegenError> {
         .collect();
     let func_typ = typ::func(&mut param_types, apply_type(&func.ret_type, base.context));
     let gen_func = util::add_function(base.module, &func.name, func_typ);
+    util::add_entry_block(gen_func, base);
     let mut env = HashMap::new();
     for (i, arg) in func.args.into_iter().enumerate() {
-        util::set_func_param(i, arg.0, gen_func, &mut env);
+        let typ = param_types[i];
+        let var = build::declare(&arg.0, typ, util::get_func_param(gen_func, i), base.builder);
+        env.insert(arg.0, var);
     }
-    util::add_entry_block(gen_func, base);
 
     for statement in func.body {
-        apply_statement(statement, &env, base)?;
+        apply_statement(statement, &mut env, base)?;
     }
     Ok(())
 }
 
-fn apply_statement(statement: Statement, env: &HashMap<String, LValue>, base: &Base) -> Result<(), CodegenError> {
+fn apply_statement(statement: Statement, env: &mut HashMap<String, LValue>, base: &Base) -> Result<(), CodegenError> {
     use Statement::*;
     match statement {
-        Declare(var, typ, init) => {
+        Declare(name, typ, init) => {
             let typ = apply_type(&typ, base.context);
             let init = apply_expr(init, env, base)?;
-            build::declare(&var, typ, init, base.builder);
+            let var = build::declare(&name, typ, init, base.builder);
+            env.insert(name, var);
             Ok(())
         },
         Assign(var, expr) => {

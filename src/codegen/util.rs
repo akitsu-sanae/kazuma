@@ -38,12 +38,9 @@ pub fn add_function(module: LModule, name: &str, typ: LType) -> LValue {
     }
 }
 
-pub fn set_func_param(idx: usize, name: String, func: LValue, env: &mut HashMap<String, LValue>) {
+pub fn get_func_param(func: LValue, idx: usize) -> LValue {
     unsafe {
-        let param = LLVMGetParam(func, idx as libc::c_uint);
-        let name_c = CString::new(name.as_str()).unwrap();
-        env.insert(name, param);
-        LLVMSetValueName(param, name_c.as_ptr())
+        LLVMGetParam(func, idx as libc::c_uint)
     }
 }
 
@@ -101,6 +98,10 @@ pub fn fresh_name(name_type: NameType, prefix: &str) -> CString {
         name_counter.insert(prefix.to_string(), 0);
     }
     CString::new(format!(".gen.{}.{}.{}", typ, prefix, count).as_bytes()).unwrap()
+}
+
+pub fn cstring(s: &str) -> CString {
+    CString::new(s.as_bytes()).unwrap()
 }
 
 pub mod i_know_what_i_do {
