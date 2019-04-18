@@ -25,7 +25,7 @@ pub fn generate(module: Module) -> Result<String, CodegenError> {
 
 fn apply_module(module: Module, base: &Base) -> Result<(), CodegenError> {
     for func in module.funcs {
-        apply_funcs(func, base)?;
+        apply_func(func, base)?;
     }
     Ok(())
 }
@@ -42,7 +42,7 @@ fn apply_type(typ: &Type, context: LContext) -> LType {
     }
 }
 
-fn apply_funcs(func: Func, base: &Base) -> Result<(), CodegenError> {
+fn apply_func(func: Func, base: &Base) -> Result<(), CodegenError> {
     let mut param_types = func.args.iter()
         .map(|&(_, ref ty)| apply_type(ty, base.context))
         .collect();

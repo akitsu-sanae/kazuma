@@ -32,7 +32,7 @@ pub fn print_module(module: LModule) -> Result<String, CodegenError> {
 }
 
 pub fn add_function(module: LModule, name: &str, typ: LType) -> LValue {
-    let name = CString::new(name.as_bytes()).unwrap();
+    let name = cstring(name);
     unsafe {
         LLVMAddFunction(module, name.as_ptr(), typ)
     }
