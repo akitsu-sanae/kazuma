@@ -83,3 +83,42 @@ fn build_if_expr_test() {
     output(module, "if_expr_test.ll")
 }
 
+#[test]
+fn build_var_test() {
+    let module = Module {
+        name: "var".to_string(),
+        funcs: vec!(Func {
+            name: "main".to_string(),
+            args: vec!(),
+            ret_type: Type::Int,
+            body: vec!(
+                Statement::Declare(
+                    "a".to_string(),
+                    Type::Int,
+                    Expr::Literal(Literal::Int(42))),
+                Statement::Return(Expr::Var("a".to_string()))),
+        }),
+    };
+    output(module, "var_expr_test.ll")
+}
+
+#[test]
+fn build_args_test() {
+    let module = Module {
+        name: "args".to_string(),
+        funcs: vec!(
+            Func {
+                name: "add".to_string(),
+                args: vec!(
+                    ("a".to_string(), Type::Int),
+                    ("b".to_string(), Type::Int)),
+                ret_type: Type::Int,
+                body: vec!(Statement::Return(Expr::BinOp(
+                            BinOp::Add,
+                            box Expr::Var("a".to_string()),
+                            box Expr::Var("b".to_string())))),
+            }),
+    };
+    output(module, "args_test.ll")
+}
+
