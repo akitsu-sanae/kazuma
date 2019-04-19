@@ -97,7 +97,24 @@ fn check_expr(expr: &Expr, env: &HashMap<String, Type>) -> Result<Type, CodegenE
                 Ok(then)
             }
         },
-        Call(_, _) => unimplemented!(),
+        Call(func, args) => {
+            let func_type = check_expr(func, env)?;
+            let args: Result<_, _> = args.iter().map(|arg| check_expr(arg, env)).collect();
+            let arg_types: Vec<Type> = args?;
+            match func_type {
+                Type::Func(param_types, box ret_types) => {
+                    if arg_types == param_types {
+                        Ok(ret_types)
+                    } else {
+                        Err(CodegenError::TypeCheck(format!(
+                                    "mismatch param types: {} vs {}",
+                                    str_of_params(&arg_types),
+                                    str_of_params(&param_types))))
+                    }
+                },
+                _ => Err(CodegenError::TypeCheck(format!("can not apply for non-functional type: {}", func_type)))
+            }
+        },
         Literal(ref lit) => Ok(type_of_lit(lit)),
         _ => unimplemented!(),
     }

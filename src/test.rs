@@ -122,3 +122,34 @@ fn build_args_test() {
     output(module, "args_test.ll")
 }
 
+#[test]
+fn build_call_expr_test() {
+    let module = Module{
+        name: "call_expr".to_string(),
+        funcs: vec!(
+            Func {
+                name: "add".to_string(),
+                args: vec!(
+                    ("a".to_string(), Type::Int),
+                    ("b".to_string(), Type::Int)),
+                ret_type: Type::Int,
+                body: vec!(Statement::Return(Expr::BinOp(
+                            BinOp::Add,
+                            box Expr::Var("a".to_string()),
+                            box Expr::Var("b".to_string())))),
+            },
+            Func {
+                name : "main".to_string(),
+                args: vec!(),
+                ret_type: Type::Int,
+                body: vec!(
+                    Statement::Return(Expr::Call(
+                            box Expr::Var("add".to_string()),
+                            vec!(
+                                Expr::Literal(Literal::Int(114)),
+                                Expr::Literal(Literal::Int(514)))))),
+            }),
+    };
+    output(module, "call_expr_test.ll")
+}
+

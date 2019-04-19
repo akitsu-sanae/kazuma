@@ -87,3 +87,11 @@ pub fn phi(typ: LType, incoming: Vec<(LValue, LBasicBlock)>, builder: LBuilder) 
     }
 }
 
+pub fn call(func: LValue, args: &mut Vec<LValue>, builder: LBuilder) -> LValue {
+    let len = args.len() as libc::c_uint;
+    let name = fresh_name(NameType::Var, "cal_ret");
+    unsafe {
+        LLVMBuildCall(builder, func, args.as_mut_ptr(), len, name.as_ptr())
+    }
+}
+

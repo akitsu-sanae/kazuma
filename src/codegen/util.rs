@@ -38,6 +38,12 @@ pub fn add_function(module: LModule, name: &str, typ: LType) -> LValue {
     }
 }
 
+pub fn get_func_by_name(name: CString, module: LModule) -> LValue {
+    unsafe {
+        LLVMGetNamedFunction(module, name.as_ptr())
+    }
+}
+
 pub fn get_func_param(func: LValue, idx: usize) -> LValue {
     unsafe {
         LLVMGetParam(func, idx as libc::c_uint)
