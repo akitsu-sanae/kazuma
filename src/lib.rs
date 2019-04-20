@@ -61,7 +61,7 @@ pub struct Func {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
     Declare(String, Type, Expr),
-    Assign(String, Expr),
+    Assign(Expr, Expr),
     Return(Expr),
     ReturnVoid,
     Expr(Expr),
@@ -76,6 +76,7 @@ pub enum BinOp {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     Var(String),
+    Load(Box<Expr>),
     BinOp(BinOp, Box<Expr>, Box<Expr>),
     If(Box<Expr>, Box<Expr>, Box<Expr>),
     Call(Box<Expr>, Vec<Expr>),
@@ -91,6 +92,7 @@ pub enum Literal {
     Char(char),
     Int(i32),
     Array(Vec<Literal>, Type),
+    Func(String),
 }
 
 use std::error::Error;

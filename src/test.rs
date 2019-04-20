@@ -96,7 +96,7 @@ fn build_var_test() {
                     "a".to_string(),
                     Type::Int,
                     Expr::Literal(Literal::Int(42))),
-                Statement::Return(Expr::Var("a".to_string()))),
+                Statement::Return(Expr::Load(box Expr::Var("a".to_string())))),
         }),
     };
     output(module, "var_expr_test.ll")
@@ -115,8 +115,8 @@ fn build_args_test() {
                 ret_type: Type::Int,
                 body: vec!(Statement::Return(Expr::BinOp(
                             BinOp::Add,
-                            box Expr::Var("a".to_string()),
-                            box Expr::Var("b".to_string())))),
+                            box Expr::Load(box Expr::Var("a".to_string())),
+                            box Expr::Load(box Expr::Var("b".to_string()))))),
             }),
     };
     output(module, "args_test.ll")
@@ -135,8 +135,8 @@ fn build_call_expr_test() {
                 ret_type: Type::Int,
                 body: vec!(Statement::Return(Expr::BinOp(
                             BinOp::Add,
-                            box Expr::Var("a".to_string()),
-                            box Expr::Var("b".to_string())))),
+                            box Expr::Load(box Expr::Var("a".to_string())),
+                            box Expr::Load(box Expr::Var("b".to_string()))))),
             },
             Func {
                 name : "main".to_string(),
@@ -144,7 +144,7 @@ fn build_call_expr_test() {
                 ret_type: Type::Int,
                 body: vec!(
                     Statement::Return(Expr::Call(
-                            box Expr::Var("add".to_string()),
+                            box Expr::Literal(Literal::Func("add".to_string())),
                             vec!(
                                 Expr::Literal(Literal::Int(114)),
                                 Expr::Literal(Literal::Int(514)))))),
@@ -166,8 +166,8 @@ fn build_func_ptr_test() {
                 ret_type: Type::Int,
                 body: vec!(Statement::Return(Expr::BinOp(
                             BinOp::Add,
-                            box Expr::Var("a".to_string()),
-                            box Expr::Var("b".to_string())))),
+                            box Expr::Load(box Expr::Var("a".to_string())),
+                            box Expr::Load(box Expr::Var("b".to_string()))))),
             },
             Func {
                 name : "main".to_string(),
@@ -177,9 +177,9 @@ fn build_func_ptr_test() {
                     Statement::Declare(
                         "f".to_string(),
                         Type::Func(vec!(Type::Int, Type::Int), box Type::Int),
-                        Expr::Var("add".to_string())),
+                        Expr::Literal(Literal::Func("add".to_string()))),
                     Statement::Return(Expr::Call(
-                            box Expr::Var("f".to_string()),
+                            box Expr::Load(box Expr::Var("f".to_string())),
                             vec!(
                                 Expr::Literal(Literal::Int(114)),
                                 Expr::Literal(Literal::Int(514)))))),
@@ -187,4 +187,5 @@ fn build_func_ptr_test() {
     };
     output(module, "func_ptr_test.ll")
 }
+
 

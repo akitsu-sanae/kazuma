@@ -30,3 +30,8 @@ pub fn int32(n: i32, context: LContext) -> LValue {
     }
 }
 
+pub fn func(name: CString, module: LModule) -> LValue {
+    unsafe {
+        LLVMGetNamedFunction(module, name.as_ptr())
+    }
+}

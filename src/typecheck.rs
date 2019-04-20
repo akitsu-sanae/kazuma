@@ -1,8 +1,12 @@
 use crate::*;
 use std::collections::HashMap;
 
+use CodegenError::*;
+
+type Env = HashMap<String, Type>;
+
 pub fn check(module: &Module) -> Result<(), CodegenError> {
-    let mut env = HashMap::new();
+    let mut env = Env::new();
 
     for func in &module.funcs {
         let typ = Type::Func(
@@ -14,15 +18,14 @@ pub fn check(module: &Module) -> Result<(), CodegenError> {
     for func in &module.funcs {
         let mut env = env.clone();
         for (var, typ) in func.args.iter() {
-            env.insert(var.clone(), typ.clone());
+            env.insert(var.clone(), Type::Pointer(box typ.clone()));
         }
         check_body(&func.body, &mut env)?;
     }
     Ok(())
 }
 
-fn check_body(statements: &Vec<Statement>, env: &HashMap<String, Type>) -> Result<Type, CodegenError> {
-    use CodegenError::*;
+fn check_body(statements: &Vec<Statement>, env: &Env) -> Result<Type, CodegenError> {
     let mut env = env.clone();
     let mut rets = vec!();
     for statement in statements {
@@ -41,21 +44,26 @@ fn check_body(statements: &Vec<Statement>, env: &HashMap<String, Type>) -> Resul
     }
 }
 
-fn check_statement(statement: &Statement, env: &mut HashMap<String, Type>) -> Result<Option<Type>, CodegenError> {
+fn check_statement(statement: &Statement, env: &mut Env) -> Result<Option<Type>, CodegenError> {
     use Statement::*;
-    use CodegenError::*;
     match statement {
         Declare(ref name, ref typ, ref expr) => {
-            check_expr(expr, env)?;
-            env.insert(name.to_string(), typ.clone());
-            Ok(None)
+            let r_type = check_expr(expr, env)?;
+            if *typ == r_type {
+                let typ = Type::Pointer(box r_type);
+                env.insert(name.to_string(), typ);
+                Ok(None)
+            } else {
+                Err(TypeCheck(format!("{} has type {}, but initialized by type {}", name, typ, r_type)))
+            }
         },
-        Assign(ref name, ref expr) => {
-            let right_type = check_expr(expr, env)?;
-            match env.get(name) {
-                Some(ref typ) if **typ == right_type => Ok(None),
-                Some(ref typ) => Err(TypeCheck(format!("unmatch types, {} vs {}", typ, right_type))),
-                None => Err(TypeCheck(format!("unbound variable {}", name))),
+        Assign(ref lhs, ref rhs) => {
+            let l_type = check_expr(lhs, env)?;
+            let r_type = check_expr(rhs, env)?;
+            if l_type == Type::Pointer(box r_type.clone()) {
+                Ok(None)
+            } else {
+                Err(TypeCheck(format!("can not assign {} into {}", r_type, l_type)))
             }
         },
         Return(ref expr) => Ok(Some(check_expr(expr, env)?)),
@@ -67,22 +75,36 @@ fn check_statement(statement: &Statement, env: &mut HashMap<String, Type>) -> Re
     }
 }
 
-fn check_expr(expr: &Expr, env: &HashMap<String, Type>) -> Result<Type, CodegenError> {
+fn check_expr(expr: &Expr, env: &Env) -> Result<Type, CodegenError> {
     use Expr::*;
     match expr {
         Var(ref name) =>
-            env.get(name).cloned().ok_or(CodegenError::TypeCheck(format!("unbound variable {}", name))),
+            env.get(name).cloned().ok_or(TypeCheck(format!("unbound variable {}", name))),
+        Load(box expr) => {
+            match check_expr(expr, env)? {
+                Type::Pointer(box typ) => Ok(typ),
+                typ => Err(TypeCheck(format!("can not load from non-pointer type, that is {}", typ)))
+            }
+        }
         BinOp(op, box ref lhs, box ref rhs) => {
             let lhs = check_expr(lhs, env)?;
             let rhs = check_expr(rhs, env)?;
-            if lhs == rhs {
-                use BinOp::*;
-                match op {
-                    Add | Sub | Mult | Div => Ok(lhs),
-                    Eq | Neq | Gt | Geq | Lt | Leq => Ok(Type::Bool)
-                }
-            } else {
-                Err(CodegenError::TypeCheck(format!("unmatch {} vs {}", lhs, rhs)))
+            use BinOp::*;
+            match (op, &lhs, &rhs) {
+                (Add, Type::Int, Type::Int) |
+                (Sub, Type::Int, Type::Int) |
+                (Mult, Type::Int, Type::Int) |
+                (Div, Type::Int, Type::Int)  => Ok(Type::Int),
+
+                (Eq, lhs, rhs) |
+                (Neq, lhs, rhs) if lhs == rhs => Ok(Type::Bool),
+
+                (Gt, Type::Int, Type::Int) |
+                (Geq, Type::Int, Type::Int) |
+                (Lt, Type::Int, Type::Int) |
+                (Leq, Type::Int, Type::Int) => Ok(Type::Bool),
+
+                _ => Err(TypeCheck(format!("unmatch {} vs {}", lhs, rhs)))
             }
         }
         If(box ref cond, box ref then, box ref else_) => {
@@ -90,9 +112,9 @@ fn check_expr(expr: &Expr, env: &HashMap<String, Type>) -> Result<Type, CodegenE
             let then = check_expr(then, env)?;
             let else_ = check_expr(else_, env)?;
             if Type::Bool != cond {
-                Err(CodegenError::TypeCheck(format!("condition must be bool, but {}", cond)))
+                Err(TypeCheck(format!("condition must be bool, but {}", cond)))
             } else if then != else_ {
-                Err(CodegenError::TypeCheck(format!("condition branches must have same type. but {} vs {}", then, else_)))
+                Err(TypeCheck(format!("condition branches must have same type. but {} vs {}", then, else_)))
             } else {
                 Ok(then)
             }
@@ -106,26 +128,27 @@ fn check_expr(expr: &Expr, env: &HashMap<String, Type>) -> Result<Type, CodegenE
                     if arg_types == param_types {
                         Ok(ret_types)
                     } else {
-                        Err(CodegenError::TypeCheck(format!(
+                        Err(TypeCheck(format!(
                                     "mismatch param types: {} vs {}",
                                     str_of_params(&arg_types),
                                     str_of_params(&param_types))))
                     }
                 },
-                _ => Err(CodegenError::TypeCheck(format!("can not apply for non-functional type: {}", func_type)))
+                typ => Err(TypeCheck(format!("can not apply for non-functional type: {}", typ))),
             }
         },
-        Literal(ref lit) => Ok(type_of_lit(lit)),
+        Literal(ref lit) => Ok(type_of_lit(lit, env)?),
         _ => unimplemented!(),
     }
 }
 
-fn type_of_lit(lit: &Literal) -> Type {
+fn type_of_lit(lit: &Literal, env: &Env) -> Result<Type, CodegenError> {
     use Literal::*;
     match lit {
-        Bool(_) => Type::Bool,
-        Char(_) => Type::Char,
-        Int(_) => Type::Int,
+        Bool(_) => Ok(Type::Bool),
+        Char(_) => Ok(Type::Char),
+        Int(_) => Ok(Type::Int),
+        Func(name) => env.get(name).cloned().ok_or(TypeCheck(format!("unknown function {}", name))),
         Array(_, _) => unimplemented!(),
     }
 }

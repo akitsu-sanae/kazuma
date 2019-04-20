@@ -15,13 +15,9 @@ pub use self::lit::*;
 pub use self::build::*;
 pub use self::util::*;
 
-#[derive(Debug, Clone, Copy)]
-enum Value {
-    Var(LValue),
-    Func,
-}
+use CodegenError::*;
 
-type Env = HashMap<String, Value>;
+type Env = HashMap<String, LValue>;
 
 pub fn generate(module: Module) -> Result<String, CodegenError> {
     i_know_what_i_do::clear_name_counter();
@@ -32,12 +28,8 @@ pub fn generate(module: Module) -> Result<String, CodegenError> {
 }
 
 fn apply_module(module: Module, base: &Base) -> Result<(), CodegenError> {
-    let mut env = Env::new();
-    for func in module.funcs.iter() {
-        env.insert(func.name.clone(), Value::Func);
-    }
     for func in module.funcs {
-        apply_func(func, &env, base)?;
+        apply_func(func, base)?;
     }
     Ok(())
 }
@@ -59,18 +51,18 @@ fn apply_type(typ: &Type, context: LContext) -> LType {
     }
 }
 
-fn apply_func(func: Func, env: &Env, base: &Base) -> Result<(), CodegenError> {
+fn apply_func(func: Func, base: &Base) -> Result<(), CodegenError> {
     let mut param_types = func.args.iter()
         .map(|&(_, ref ty)| apply_type(ty, base.context))
         .collect();
     let func_typ = typ::func(&mut param_types, apply_type(&func.ret_type, base.context));
     let gen_func = util::add_function(base.module, &func.name, func_typ);
     util::add_entry_block(gen_func, base);
-    let mut env = env.clone();
+    let mut env = Env::new();
     for (i, arg) in func.args.into_iter().enumerate() {
         let typ = param_types[i];
         let var = build::declare(&arg.0, typ, util::get_func_param(gen_func, i), base.builder);
-        env.insert(arg.0, Value::Var(var));
+        env.insert(arg.0, var);
     }
 
     for statement in func.body {
@@ -91,20 +83,14 @@ fn apply_statement(statement: Statement, env: &mut Env, base: &Base) -> Result<(
             let typ = apply_type(&typ, base.context);
             let init = apply_expr(init, env, base)?;
             let var = build::declare(&name, typ, init, base.builder);
-            env.insert(name, Value::Var(var));
+            env.insert(name, var);
             Ok(())
         },
-        Assign(name, expr) => {
-            let var = env.get(&name)
-                .ok_or(CodegenError::ModuleBuilding(format!("unbound variable: {}", name)))?;
-            match var {
-                Value::Func => Err(CodegenError::ModuleBuilding(format!("can not assign value to function {}", name))),
-                Value::Var(var) => {
-                    let expr = apply_expr(expr, env, base)?;
-                    build::store(*var, expr, base.builder);
-                    Ok(())
-                }
-            }
+        Assign(lhs, rhs) => {
+            let lhs = apply_expr(lhs, env, base)?;
+            let rhs = apply_expr(rhs, env, base)?;
+            build::store(lhs, rhs, base.builder);
+            Ok(())
         },
         Return(expr) => {
             let expr = apply_expr(expr, env, base)?;
@@ -125,16 +111,8 @@ fn apply_statement(statement: Statement, env: &mut Env, base: &Base) -> Result<(
 fn apply_expr(expr: Expr, env: &Env, base: &Base) -> Result<LValue, CodegenError> {
     use Expr::*;
     match expr {
-        Var(name) => {
-            let var = env.get(&name)
-                .ok_or(CodegenError::ModuleBuilding(format!("unbound variable: {}", name)))?;
-            match var {
-                Value::Var(var) =>
-                    Ok(build::load(*var, base.builder)),
-                Value::Func =>
-                    Ok(util::get_func_by_name(cstring(&name), base.module)),
-            }
-        },
+        Var(name) => env.get(&name).cloned().ok_or(ModuleBuilding(format!("unbound variable: {}", name))),
+        Load(box expr) => Ok(build::load(apply_expr(expr, env, base)?, base.builder)),
         Literal(lit) => apply_literal(lit, base),
         BinOp(op, box lhs, box rhs) => apply_binop_expr(op, lhs, rhs, env, base),
         If(box cond, box then, box else_) => apply_if_expr(cond, then, else_, env, base),
@@ -192,6 +170,7 @@ fn apply_literal(lit: Literal, base: &Base) -> Result<LValue, CodegenError> {
     match lit {
         Bool(b) => Ok(lit::bool(b, base.context)),
         Int(n) => Ok(lit::int32(n, base.context)),
+        Func(name) => Ok(lit::func(cstring(&name), base.module)),
         _ => unimplemented!(),
     }
 }
