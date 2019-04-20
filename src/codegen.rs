@@ -16,8 +16,8 @@ pub use self::build::*;
 pub use self::util::*;
 
 use crate::typ::Type;
-
-use CodegenError::*;
+use crate::error::CodegenError::{self, *};
+use crate::program::*;
 
 type Env = HashMap<String, LValue>;
 
@@ -37,7 +37,7 @@ fn apply_module(module: Module, base: &Base) -> Result<(), CodegenError> {
 }
 
 fn apply_type(typ: &Type, context: LContext) -> LType {
-    use Type::*;
+    use typ::Type::*;
     match typ {
         Void => typ::void(context),
         Bool => typ::bool(context),
@@ -75,7 +75,7 @@ fn apply_func(func: Func, base: &Base) -> Result<(), CodegenError> {
 }
 
 fn apply_statement(statement: Statement, env: &mut Env, base: &Base) -> Result<(), CodegenError> {
-    use Statement::*;
+    use program::Statement::*;
     match statement {
         Declare(name, typ, init) => {
             let typ = if let Type::Func(from, to) = typ {
@@ -115,7 +115,7 @@ fn apply_statement(statement: Statement, env: &mut Env, base: &Base) -> Result<(
 }
 
 fn apply_expr(expr: Expr, env: &Env, base: &Base) -> Result<LValue, CodegenError> {
-    use Expr::*;
+    use program::Expr::*;
     match expr {
         Var(name) => env.get(&name).cloned().ok_or(ModuleBuilding(format!("unbound variable: {}", name))),
         Load(box expr) => Ok(build::load(apply_expr(expr, env, base)?, base.builder)),
@@ -138,7 +138,7 @@ fn apply_expr(expr: Expr, env: &Env, base: &Base) -> Result<LValue, CodegenError
 }
 
 fn apply_binop_expr(op: BinOp, lhs: Expr, rhs: Expr, env: &Env, base: &Base) -> Result<LValue, CodegenError> {
-    use BinOp::*;
+    use program::BinOp::*;
     let lhs = apply_expr(lhs, env, base)?;
     let rhs = apply_expr(rhs, env, base)?;
     match op {
@@ -177,7 +177,7 @@ fn apply_if_expr(cond: Expr, then: Expr, else_: Expr, env: &Env, base: &Base) ->
 }
 
 fn apply_literal(lit: Literal, env: &Env, base: &Base) -> Result<LValue, CodegenError> {
-    use Literal::*;
+    use program::Literal::*;
     match lit {
         Bool(b) => Ok(lit::bool(b, base.context)),
         Int(n) => Ok(lit::int32(n, base.context)),

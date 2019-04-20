@@ -1,13 +1,14 @@
 
 use std::fs;
 use std::io::Write;
-use crate::*;
+use crate::program::*;
+use crate::error::*;
 use crate::typ::*;
 
 #[cfg(test)]
 fn output(module: Module, filename: &str) {
     let mut f = fs::File::create(&format!("./test/{}", filename)).unwrap();
-    match generate(module) {
+    match crate::generate(module) {
         Ok(code) => write!(f, "{}", code).unwrap(),
         Err(err) => panic!("{}", err),
     }

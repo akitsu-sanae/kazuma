@@ -1,3 +1,4 @@
+use std::fmt;
 use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]

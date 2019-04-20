@@ -1,7 +1,8 @@
-use crate::*;
 use std::collections::HashMap;
 
-use CodegenError::*;
+use typ::*;
+use program::*;
+use error::CodegenError::{self, *};
 
 type Env = HashMap<String, Type>;
 
@@ -45,7 +46,7 @@ fn check_body(statements: &Vec<Statement>, env: &Env) -> Result<Type, CodegenErr
 }
 
 fn check_statement(statement: &Statement, env: &mut Env) -> Result<Option<Type>, CodegenError> {
-    use Statement::*;
+    use program::Statement::*;
     match statement {
         Declare(ref name, ref typ, ref expr) => {
             let r_type = check_expr(expr, env)?;
@@ -76,7 +77,7 @@ fn check_statement(statement: &Statement, env: &mut Env) -> Result<Option<Type>,
 }
 
 fn check_expr(expr: &Expr, env: &Env) -> Result<Type, CodegenError> {
-    use Expr::*;
+    use program::Expr::*;
     match expr {
         Var(ref name) =>
             env.get(name).cloned().ok_or(TypeCheck(format!("unbound variable {}", name))),
@@ -89,7 +90,7 @@ fn check_expr(expr: &Expr, env: &Env) -> Result<Type, CodegenError> {
         BinOp(op, box ref lhs, box ref rhs) => {
             let lhs = check_expr(lhs, env)?;
             let rhs = check_expr(rhs, env)?;
-            use BinOp::*;
+            use program::BinOp::*;
             match (op, &lhs, &rhs) {
                 (Add, Type::Int, Type::Int) |
                 (Sub, Type::Int, Type::Int) |
@@ -158,7 +159,7 @@ fn check_expr(expr: &Expr, env: &Env) -> Result<Type, CodegenError> {
 }
 
 fn type_of_lit(lit: &Literal, env: &Env) -> Result<Type, CodegenError> {
-    use Literal::*;
+    use program::Literal::*;
     match lit {
         Bool(_) => Ok(Type::Bool),
         Char(_) => Ok(Type::Char),
