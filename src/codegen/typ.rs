@@ -40,6 +40,12 @@ pub fn variadic_func(from: &mut Vec<LType>, to: LType) -> LType {
         LLVMFunctionType(to, from.as_mut_ptr(), from.len() as libc::c_uint, 1)
     }
 }
+pub fn ptr(typ: LType) -> LType {
+    unsafe {
+        LLVMPointerType(typ, 0)
+    }
+}
+
 pub fn type_of(v: LValue) -> LType {
     unsafe {
         LLVMTypeOf(v)

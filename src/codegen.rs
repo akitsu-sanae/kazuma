@@ -55,6 +55,7 @@ fn apply_type(typ: &Type, context: LContext) -> LType {
             let to = apply_type(to, context);
             typ::func(&mut from, to)
         }
+        Pointer(box typ) => typ::ptr(apply_type(typ, context)),
     }
 }
 
@@ -82,6 +83,11 @@ fn apply_statement(statement: Statement, env: &mut Env, base: &Base) -> Result<(
     use Statement::*;
     match statement {
         Declare(name, typ, init) => {
+            let typ = if let Type::Func(from, to) = typ {
+                Type::Pointer(box Type::Func(from, to))
+            } else {
+                typ
+            };
             let typ = apply_type(&typ, base.context);
             let init = apply_expr(init, env, base)?;
             let var = build::declare(&name, typ, init, base.builder);

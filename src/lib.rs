@@ -24,6 +24,7 @@ pub struct Module {
 pub enum Type {
     Void, Bool, Char, Int, String,
     Func(Vec<Type>, Box<Type>),
+    Pointer(Box<Type>),
 }
 
 fn str_of_params(params: &[Type]) -> String {
@@ -44,6 +45,7 @@ impl fmt::Display for Type {
             Int => write!(f, "int"),
             String => write!(f, "string"),
             Func(from, to) => write!(f, "{} -> {}", str_of_params(from), to),
+            Pointer(box ref typ) => write!(f, "ptr<{}>", typ),
         }
     }
 }
