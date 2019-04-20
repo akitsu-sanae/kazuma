@@ -1,7 +1,8 @@
 
 use std::fs;
 use std::io::Write;
-use super::*;
+use crate::*;
+use crate::typ::*;
 
 #[cfg(test)]
 fn output(module: Module, filename: &str) {
@@ -188,4 +189,39 @@ fn build_func_ptr_test() {
     output(module, "func_ptr_test.ll")
 }
 
+#[test]
+fn build_array_test() {
+    // func main() {
+    //   let arr: array[int, 2] = [114, 514];
+    //   arr[1] = 42;
+    //   return arr[1];
+    // }
+    let module = Module {
+        name: "array".to_string(),
+        funcs: vec!(Func {
+            name: "main".to_string(),
+            args: vec!(),
+            ret_type: Type::Int,
+            body: vec!(
+                Statement::Declare(
+                    "arr".to_string(),
+                    Type::Array(box Type::Int, 2),
+                    Expr::Literal(Literal::Array(
+                            vec!(
+                                Expr::Literal(Literal::Int(114)),
+                                Expr::Literal(Literal::Int(514))),
+                            Type::Int))),
+                Statement::Assign(
+                    Expr::ArrayAt(
+                        box Expr::Var("arr".to_string()),
+                        box Expr::Literal(Literal::Int(1))),
+                    Expr::Literal(Literal::Int(42))),
+                Statement::Return(Expr::Load(box Expr::ArrayAt(
+                            box Expr::Var("arr".to_string()),
+                            box Expr::Literal(Literal::Int(1))))),
+                ),
+        }),
+    };
+    output(module, "array_test.ll");
+}
 

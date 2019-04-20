@@ -77,6 +77,7 @@ pub fn append_block(label: &str, prev_block: LBasicBlock, base: &Base) -> LBasic
 #[derive(Debug, Clone, Copy)]
 pub enum NameType {
     Var, Label,
+    GlobalConst,
 }
 
 pub fn fresh_name(name_type: NameType, prefix: &str) -> CString {
@@ -84,6 +85,7 @@ pub fn fresh_name(name_type: NameType, prefix: &str) -> CString {
     let typ = match name_type {
         Var => "var",
         Label => "label",
+        GlobalConst => "global_const",
     };
 
     let mut name_counter = NAME_COUNTER.write().unwrap();

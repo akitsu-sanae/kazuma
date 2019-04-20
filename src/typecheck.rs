@@ -119,6 +119,21 @@ fn check_expr(expr: &Expr, env: &Env) -> Result<Type, CodegenError> {
                 Ok(then)
             }
         },
+        ArrayAt(box arr, box idx) => {
+            let arr_type = check_expr(arr, env)?;
+            match arr_type {
+                Type::Pointer(box Type::Array(inner_type, _)) => {
+                    let idx_type = check_expr(idx, env)?;
+                    if idx_type.is_integer() {
+                        // TODO: check idx is valid when idx is constant
+                        Ok(Type::Pointer(inner_type))
+                    } else {
+                        Err(TypeCheck(format!("can not use `[]` operator with a non-integer parameter, that is {}", idx_type)))
+                    }
+                },
+                typ => Err(TypeCheck(format!("can not use `[]` operator for non-array type, that is {}", typ)))
+            }
+        },
         Call(func, args) => {
             let func_type = check_expr(func, env)?;
             let args: Result<_, _> = args.iter().map(|arg| check_expr(arg, env)).collect();
@@ -149,7 +164,7 @@ fn type_of_lit(lit: &Literal, env: &Env) -> Result<Type, CodegenError> {
         Char(_) => Ok(Type::Char),
         Int(_) => Ok(Type::Int),
         Func(name) => env.get(name).cloned().ok_or(TypeCheck(format!("unknown function {}", name))),
-        Array(_, _) => unimplemented!(),
+        Array(elems, typ) => Ok(Type::Array(box typ.clone(), elems.len())),
     }
 }
 

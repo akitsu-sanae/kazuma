@@ -8,46 +8,19 @@ extern crate lazy_static;
 extern crate llvm_sys as llvm;
 extern crate libc;
 
+mod typ;
 mod codegen;
 mod typecheck;
 mod test;
 
 use std::fmt;
 
+use typ::*;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Module {
     pub name: String,
     pub funcs: Vec<Func>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Type {
-    Void, Bool, Char, Int, String,
-    Func(Vec<Type>, Box<Type>),
-    Pointer(Box<Type>),
-}
-
-fn str_of_params(params: &[Type]) -> String {
-    match params {
-        [] => "()".to_string(),
-        [head, tail..] =>
-            tail.into_iter().fold(format!("{}", head), |acc, typ| format!("{}, {}", acc, typ))
-    }
-}
-
-impl fmt::Display for Type {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use self::Type::*;
-        match self {
-            Void => write!(f, "void"),
-            Bool => write!(f, "bool"),
-            Char => write!(f, "char"),
-            Int => write!(f, "int"),
-            String => write!(f, "string"),
-            Func(from, to) => write!(f, "{} -> {}", str_of_params(from), to),
-            Pointer(box ref typ) => write!(f, "ptr<{}>", typ),
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -79,6 +52,7 @@ pub enum Expr {
     Load(Box<Expr>),
     BinOp(BinOp, Box<Expr>, Box<Expr>),
     If(Box<Expr>, Box<Expr>, Box<Expr>),
+    ArrayAt(Box<Expr>, Box<Expr>),
     Call(Box<Expr>, Vec<Expr>),
     Literal(Literal),
 
@@ -91,7 +65,7 @@ pub enum Literal {
     Bool(bool),
     Char(char),
     Int(i32),
-    Array(Vec<Literal>, Type),
+    Array(Vec<Expr>, Type),
     Func(String),
 }
 

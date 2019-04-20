@@ -46,9 +46,21 @@ pub fn ptr(typ: LType) -> LType {
     }
 }
 
+pub fn array(typ: LType, len: usize) -> LType {
+    unsafe {
+        LLVMArrayType(typ, len as u32)
+    }
+}
+
 pub fn type_of(v: LValue) -> LType {
     unsafe {
         LLVMTypeOf(v)
+    }
+}
+
+pub fn size_of(typ: LType) -> LValue {
+    unsafe {
+        LLVMSizeOf(typ)
     }
 }
 

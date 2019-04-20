@@ -11,6 +11,26 @@ pub fn declare(name: &str, typ: LType, init: LValue, builder: LBuilder) -> LValu
      }
 }
 
+pub fn declare_array(name: &str, typ: LType, init: LValue, base: &Base) -> LValue {
+    let name = cstring(name);
+    let var_ptr_name = fresh_name(NameType::Var, "var_ptr");
+    let init_ptr_name = fresh_name(NameType::Var, "init_ptr");
+    let memcpy_name = cstring("memcpy");
+    unsafe {
+        let var = LLVMBuildAlloca(base.builder, typ, name.as_ptr());
+
+        let var_ptr = LLVMBuildBitCast(base.builder, var, typ::char_ptr(base.context), var_ptr_name.as_ptr());
+        let init_ptr = LLVMBuildBitCast(base.builder, init, typ::char_ptr(base.context), init_ptr_name.as_ptr());
+        let len = typ::size_of(typ);
+
+        let memcpy = LLVMGetNamedFunction(base.module, memcpy_name.as_ptr()); // TODO: add memcpy as buildin
+        let mut args = vec!(var_ptr, init_ptr, len);
+        LLVMBuildCall(base.builder, memcpy, args.as_mut_ptr(), args.len() as libc::c_uint, b"\0".as_ptr() as *const _);
+
+        var
+    }
+}
+
 pub fn store(var: LValue, expr: LValue, builder: LBuilder) -> LValue {
     unsafe {
         LLVMBuildStore(builder, expr, var)
@@ -92,6 +112,19 @@ pub fn call(func: LValue, args: &mut Vec<LValue>, builder: LBuilder) -> LValue {
     let name = fresh_name(NameType::Var, "cal_ret");
     unsafe {
         LLVMBuildCall(builder, func, args.as_mut_ptr(), len, name.as_ptr())
+    }
+}
+
+pub fn gep(arr: LValue, idx: LValue, base: &Base) -> LValue {
+    let mut indices = vec!(lit::int32(0, base.context), idx);
+    let name = fresh_name(NameType::Var, "gep_ret");
+    unsafe {
+        LLVMBuildGEP(
+            base.builder,
+            arr,
+            indices.as_mut_ptr(),
+            indices.len() as libc::c_uint,
+            name.as_ptr())
     }
 }
 

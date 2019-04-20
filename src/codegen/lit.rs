@@ -35,3 +35,16 @@ pub fn func(name: CString, module: LModule) -> LValue {
         LLVMGetNamedFunction(module, name.as_ptr())
     }
 }
+
+pub fn array(mut elems: Vec<LValue>, typ: LType, module: LModule) -> LValue {
+    let name = fresh_name(NameType::GlobalConst, "array");
+    let arr_type = typ::array(typ, elems.len());
+    unsafe {
+        let arr = LLVMConstArray(typ, elems.as_mut_ptr(), elems.len() as u32);
+        let global_var = LLVMAddGlobal(module, arr_type, name.as_ptr());
+        LLVMSetInitializer(global_var, arr);
+        LLVMSetGlobalConstant(global_var, 1);
+        global_var
+    }
+}
+

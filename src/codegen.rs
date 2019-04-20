@@ -15,6 +15,8 @@ pub use self::lit::*;
 pub use self::build::*;
 pub use self::util::*;
 
+use crate::typ::Type;
+
 use CodegenError::*;
 
 type Env = HashMap<String, LValue>;
@@ -47,6 +49,7 @@ fn apply_type(typ: &Type, context: LContext) -> LType {
             let to = apply_type(to, context);
             typ::func(&mut from, to)
         }
+        Array(box typ, len) => typ::array(apply_type(typ, context), *len),
         Pointer(box typ) => typ::ptr(apply_type(typ, context)),
     }
 }
@@ -80,9 +83,12 @@ fn apply_statement(statement: Statement, env: &mut Env, base: &Base) -> Result<(
             } else {
                 typ
             };
-            let typ = apply_type(&typ, base.context);
-            let init = apply_expr(init, env, base)?;
-            let var = build::declare(&name, typ, init, base.builder);
+            let l_typ = apply_type(&typ, base.context);
+            let l_init = apply_expr(init, env, base)?;
+            let var = match &typ {
+                Type::Array(_, _) => build::declare_array(&name, l_typ, l_init, base),
+                _ => build::declare(&name, l_typ, l_init, base.builder),
+            };
             env.insert(name, var);
             Ok(())
         },
@@ -113,9 +119,14 @@ fn apply_expr(expr: Expr, env: &Env, base: &Base) -> Result<LValue, CodegenError
     match expr {
         Var(name) => env.get(&name).cloned().ok_or(ModuleBuilding(format!("unbound variable: {}", name))),
         Load(box expr) => Ok(build::load(apply_expr(expr, env, base)?, base.builder)),
-        Literal(lit) => apply_literal(lit, base),
+        Literal(lit) => apply_literal(lit, env, base),
         BinOp(op, box lhs, box rhs) => apply_binop_expr(op, lhs, rhs, env, base),
         If(box cond, box then, box else_) => apply_if_expr(cond, then, else_, env, base),
+        ArrayAt(box arr, box idx) => {
+            let arr = apply_expr(arr, env, base)?;
+            let idx = apply_expr(idx, env, base)?;
+            Ok(build::gep(arr, idx, base))
+        },
         Call(box func, args) => {
             let func = apply_expr(func, env, base)?;
             let args: Result<Vec<LValue>, _> = args.into_iter().map(|arg| apply_expr(arg, env, base)).collect();
@@ -165,12 +176,18 @@ fn apply_if_expr(cond: Expr, then: Expr, else_: Expr, env: &Env, base: &Base) ->
     Ok(build::phi(typ::type_of(then), vec!((then, then_block), (else_, else_block)), base.builder))
 }
 
-fn apply_literal(lit: Literal, base: &Base) -> Result<LValue, CodegenError> {
+fn apply_literal(lit: Literal, env: &Env, base: &Base) -> Result<LValue, CodegenError> {
     use Literal::*;
     match lit {
         Bool(b) => Ok(lit::bool(b, base.context)),
         Int(n) => Ok(lit::int32(n, base.context)),
         Func(name) => Ok(lit::func(cstring(&name), base.module)),
+        Array(elems, typ) => {
+            let typ = apply_type(&typ, base.context);
+            let elems: Result<Vec<_>, _> = elems.into_iter().map(|e| apply_expr(e, env, base)).collect();
+            let elems = elems?;
+            Ok(lit::array(elems, typ, base.module))
+        },
         _ => unimplemented!(),
     }
 }
