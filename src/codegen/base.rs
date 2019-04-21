@@ -58,7 +58,7 @@ fn add_printf_function(context: LContext, module: LModule) {
 
 fn add_num_format_str(context: LContext, module: LModule) {
     let num_format_str = CString::new(".buildin.format.num").unwrap();
-    let init = lit::str("%d", context);
+    let init = lit::str("%d\n", context);
     unsafe {
         let global_var = llvm::core::LLVMAddGlobal(module, typ::type_of(init), num_format_str.as_ptr());
         llvm::core::LLVMSetInitializer(global_var, init);

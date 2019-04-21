@@ -111,7 +111,17 @@ fn apply_statement(statement: Statement, env: &mut Env, base: &Base) -> Result<(
             apply_expr(expr, env, base)?;
             Ok(())
         },
+        PrintNum(expr) => {
+            apply_print_num(expr, env, base)?;
+            Ok(())
+        },
     }
+}
+
+fn apply_print_num(expr: Expr, env: &Env, base: &Base) -> Result<(), CodegenError> {
+    let value = apply_expr(expr, env, base)?;
+    build::buildin::print_num(value, base);
+    Ok(())
 }
 
 fn apply_expr(expr: Expr, env: &Env, base: &Base) -> Result<LValue, CodegenError> {
@@ -133,7 +143,6 @@ fn apply_expr(expr: Expr, env: &Env, base: &Base) -> Result<LValue, CodegenError
             let mut args = args?;
             Ok(build::call(func, &mut args, base.builder))
         },
-        _ => unimplemented!(),
     }
 }
 

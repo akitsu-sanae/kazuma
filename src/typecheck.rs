@@ -72,7 +72,14 @@ fn check_statement(statement: &Statement, env: &mut Env) -> Result<Option<Type>,
         Expr(ref expr) => {
             check_expr(expr, env)?;
             Ok(None)
-        }
+        },
+        PrintNum(expr) => {
+            if Type::Int == check_expr(expr, env)? {
+                Ok(None)
+            } else {
+                Err(TypeCheck(format!("can not print non-integer, {:?}", expr)))
+            }
+        },
     }
 }
 
@@ -154,7 +161,6 @@ fn check_expr(expr: &Expr, env: &Env) -> Result<Type, CodegenError> {
             }
         },
         Literal(ref lit) => Ok(type_of_lit(lit, env)?),
-        _ => unimplemented!(),
     }
 }
 

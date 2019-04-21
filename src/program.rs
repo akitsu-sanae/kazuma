@@ -21,6 +21,9 @@ pub enum Statement {
     Return(Expr),
     ReturnVoid,
     Expr(Expr),
+
+    // for debug
+    PrintNum(Expr),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -38,9 +41,6 @@ pub enum Expr {
     ArrayAt(Box<Expr>, Box<Expr>),
     Call(Box<Expr>, Vec<Expr>),
     Literal(Literal),
-
-    // for debug
-    Print(Box<Expr>),
 }
 
 #[derive(Debug, Clone, PartialEq)]

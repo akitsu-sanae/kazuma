@@ -128,3 +128,21 @@ pub fn gep(arr: LValue, idx: LValue, base: &Base) -> LValue {
     }
 }
 
+pub mod buildin {
+
+    use super::*;
+    pub fn print_num(value: LValue, base: &Base) {
+        unsafe {
+            let printf_name = cstring("printf");
+            let printf = LLVMGetNamedFunction(base.module, printf_name.as_ptr());
+
+            let format = LLVMGetNamedGlobal(base.module, cstring(".buildin.format.num").as_ptr());
+            let format_ptr_name = cstring("format_ptr");
+            let format_ptr = LLVMBuildBitCast(base.builder, format, typ::char_ptr(base.context), format_ptr_name.as_ptr());
+            let mut args = vec!(format_ptr, value);
+            call(printf, &mut args, base.builder);
+        }
+    }
+
+}
+

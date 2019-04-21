@@ -226,3 +226,20 @@ fn build_array_test() {
     output(module, "array_test.ll");
 }
 
+#[test]
+fn build_print_num_test() {
+    let module = Module {
+        name: "print_num".to_string(),
+        funcs: vec!(Func {
+            name: "main".to_string(),
+            args: vec!(),
+            ret_type: Type::Int,
+            body: vec!(
+                Statement::PrintNum(Expr::Literal(Literal::Int(42))),
+                Statement::Return(Expr::Literal(Literal::Int(0)))),
+        }),
+    };
+    output(module, "print_num_test.ll")
+}
+
+
