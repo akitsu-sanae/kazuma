@@ -23,7 +23,7 @@ pub fn declare_array(name: &str, typ: LType, init: LValue, base: &Base) -> LValu
         let init_ptr = LLVMBuildBitCast(base.builder, init, typ::char_ptr(base.context), init_ptr_name.as_ptr());
         let len = typ::size_of(typ);
 
-        let memcpy = LLVMGetNamedFunction(base.module, memcpy_name.as_ptr()); // TODO: add memcpy as buildin
+        let memcpy = LLVMGetNamedFunction(base.module, memcpy_name.as_ptr());
         let mut args = vec!(var_ptr, init_ptr, len);
         LLVMBuildCall(base.builder, memcpy, args.as_mut_ptr(), args.len() as libc::c_uint, b"\0".as_ptr() as *const _);
 
