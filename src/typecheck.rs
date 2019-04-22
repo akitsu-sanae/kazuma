@@ -146,10 +146,11 @@ fn check_expr(expr: &Expr, env: &Env) -> Result<Type, CodegenError> {
             let func_type = check_expr(func, env)?;
             let args: Result<_, _> = args.iter().map(|arg| check_expr(arg, env)).collect();
             let arg_types: Vec<Type> = args?;
+            let func_type = if let Type::Pointer(box typ) = func_type { typ } else { unreachable!() };
             match func_type {
-                Type::Func(param_types, box ret_types) => {
+                Type::Func(param_types, box ret_type) => {
                     if arg_types == param_types {
-                        Ok(ret_types)
+                        Ok(ret_type)
                     } else {
                         Err(TypeCheck(format!(
                                     "mismatch param types: {} vs {}",
@@ -170,7 +171,7 @@ fn type_of_lit(lit: &Literal, env: &Env) -> Result<Type, CodegenError> {
         Bool(_) => Ok(Type::Bool),
         Char(_) => Ok(Type::Char),
         Int(_) => Ok(Type::Int),
-        Func(name) => env.get(name).cloned().ok_or(TypeCheck(format!("unknown function {}", name))),
+        Func(name) => Ok(Type::Pointer(box env.get(name).cloned().ok_or(TypeCheck(format!("unknown function {}", name)))?)),
         Array(elems, typ) => Ok(Type::Array(box typ.clone(), elems.len())),
     }
 }

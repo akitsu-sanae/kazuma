@@ -234,7 +234,7 @@ fn build_func_ptr_test() {
                 body: vec!(
                     Statement::Declare(
                         "f".to_string(),
-                        Type::Func(vec!(Type::Int, Type::Int), box Type::Int),
+                        Type::Pointer(box Type::Func(vec!(Type::Int, Type::Int), box Type::Int)),
                         Expr::Literal(Literal::Func("add".to_string()))),
                     Statement::PrintNum(Expr::Call(
                             box Expr::Load(box Expr::Var("f".to_string())),
