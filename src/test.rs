@@ -1,92 +1,119 @@
 
-use std::fs;
-use std::io::Write;
 use crate::program::*;
-use crate::error::*;
 use crate::typ::*;
 
 #[cfg(test)]
-fn output(module: Module, filename: &str) {
-    let mut f = fs::File::create(&format!("./test/{}", filename)).unwrap();
-    match crate::generate(module) {
-        Ok(code) => write!(f, "{}", code).unwrap(),
-        Err(err) => panic!("{}", err),
+fn check(module: Module, expected: &str, filename: &str) {
+    use std::fs;
+    use std::io::Write;
+    use std::process::Command;
+    use std::str;
+    let filename = format!("./test/{}", filename);
+    { // write llvm-ir
+        let mut f = fs::File::create(&filename).unwrap();
+        match crate::generate(module) {
+            Ok(code) => write!(f, "{}", code).unwrap(),
+            Err(err) => panic!("{}", err),
+        }
+    }
+    { // run & check
+        let result = Command::new("lli")
+            .arg(&filename)
+            .output()
+            .expect("failed to execute lli");
+        let output = str::from_utf8(&result.stdout).expect("unrecognazed outut");
+        assert_eq!(output, expected);
+        assert!(result.status.success());
     }
 }
 
 #[test]
-fn build_module_test() {
-    let module = Module {
-        name: "module".to_string(),
-        funcs: vec!(),
-    };
-    output(module, "module_test.ll");
-}
-
-#[test]
 fn build_function_test() {
+    // int main() { return 0; }
     let module = Module {
         name: "empty function".to_string(),
         funcs: vec!(Func {
             name: "main".to_string(),
             args: vec!(),
-            ret_type: Type::Void,
-            body: vec!(Statement::ReturnVoid),
+            ret_type: Type::Int,
+            body: vec!(Statement::Return(Expr::Literal(Literal::Int(0)))),
         }),
     };
-    output(module, "function_test.ll")
+    check(module, "", "function_test.ll")
 }
 
 #[test]
-fn build_ret_function_test() {
+fn build_int_literal_test() {
+    // int main() {
+    //   printf("%d\n", 42);
+    //   return 0;
+    // }
     let module = Module {
-        name: "ret function".to_string(),
+        name: "int literal".to_string(),
         funcs: vec!(Func {
             name: "main".to_string(),
             args: vec!(),
             ret_type: Type::Int,
-            body: vec!(Statement::Return(Expr::Literal(Literal::Int(42)))),
+            body: vec!(
+                Statement::PrintNum(Expr::Literal(Literal::Int(42))),
+                Statement::Return(Expr::Literal(Literal::Int(0)))),
         }),
     };
-    output(module, "ret_function_test.ll")
+    check(module, "42\n", "int_literal_test.ll")
 }
 
 #[test]
 fn build_binop_expr_test() {
+    // int main() {
+    //   printf("%d\n", 114 + 514);
+    //   return 0;
+    // }
     let module = Module {
         name: "binop expr".to_string(),
         funcs: vec!(Func {
             name: "main".to_string(),
             args: vec!(),
             ret_type: Type::Int,
-            body: vec!(Statement::Return(Expr::BinOp(
+            body: vec!(
+                Statement::PrintNum(Expr::BinOp(
                         BinOp::Add,
                         box Expr::Literal(Literal::Int(114)),
-                        box Expr::Literal(Literal::Int(514))))),
+                        box Expr::Literal(Literal::Int(514)))),
+                Statement::Return(Expr::Literal(Literal::Int(0)))),
         }),
     };
-    output(module, "binop_expr_test.ll")
+    check(module, "628\n", "binop_expr_test.ll")
 }
 
 #[test]
 fn build_if_expr_test() {
+    // int main() {
+    //   printf("%d\n", if true {114} else {514});
+    // }
     let module = Module {
         name: "if expr".to_string(),
         funcs: vec!(Func {
             name: "main".to_string(),
             args: vec!(),
             ret_type: Type::Int,
-            body: vec!(Statement::Return(Expr::If(
+            body: vec!(
+                Statement::PrintNum(Expr::If(
                         box Expr::Literal(Literal::Bool(true)),
                         box Expr::Literal(Literal::Int(114)),
-                        box Expr::Literal(Literal::Int(514))))),
+                        box Expr::Literal(Literal::Int(514)))),
+                Statement::Return(Expr::Literal(Literal::Int(0))))
         }),
     };
-    output(module, "if_expr_test.ll")
+    check(module, "114\n", "if_expr_test.ll")
 }
 
 #[test]
 fn build_var_test() {
+    // int main() {
+    //   int a = 42;
+    //   printf("%d\n", a);
+    //   return 0;
+    // }
     let module = Module {
         name: "var".to_string(),
         funcs: vec!(Func {
@@ -98,14 +125,21 @@ fn build_var_test() {
                     "a".to_string(),
                     Type::Int,
                     Expr::Literal(Literal::Int(42))),
-                Statement::Return(Expr::Load(box Expr::Var("a".to_string())))),
+                Statement::PrintNum(Expr::Load(box Expr::Var("a".to_string()))),
+                Statement::Return(Expr::Literal(Literal::Int(0))))
         }),
     };
-    output(module, "var_expr_test.ll")
+    check(module, "42\n", "var_expr_test.ll")
 }
 
 #[test]
 fn build_args_test() {
+    // int add(int a, int b) {
+    //   return a + b;
+    // }
+    // int main() {
+    //   return 0;
+    // }
     let module = Module {
         name: "args".to_string(),
         funcs: vec!(
@@ -119,13 +153,26 @@ fn build_args_test() {
                             BinOp::Add,
                             box Expr::Load(box Expr::Var("a".to_string())),
                             box Expr::Load(box Expr::Var("b".to_string()))))),
+            },
+            Func {
+                name: "main".to_string(),
+                args: vec!(),
+                ret_type: Type::Int,
+                body: vec!(Statement::Return(Expr::Literal(Literal::Int(0)))),
             }),
     };
-    output(module, "args_test.ll")
+    check(module, "", "args_test.ll")
 }
 
 #[test]
 fn build_call_expr_test() {
+    // int add(int a, int b) {
+    //   return a + b;
+    // }
+    // int main() {
+    //   printf("%d\n", add(114, 514));
+    //   return 0;
+    // }
     let module = Module{
         name: "call_expr".to_string(),
         funcs: vec!(
@@ -145,18 +192,27 @@ fn build_call_expr_test() {
                 args: vec!(),
                 ret_type: Type::Int,
                 body: vec!(
-                    Statement::Return(Expr::Call(
+                    Statement::PrintNum(Expr::Call(
                             box Expr::Literal(Literal::Func("add".to_string())),
                             vec!(
                                 Expr::Literal(Literal::Int(114)),
-                                Expr::Literal(Literal::Int(514)))))),
+                                Expr::Literal(Literal::Int(514))))),
+                    Statement::Return(Expr::Literal(Literal::Int(0)))),
             }),
     };
-    output(module, "call_expr_test.ll")
+    check(module, "628\n", "call_expr_test.ll")
 }
 
 #[test]
 fn build_func_ptr_test() {
+    // int add(int a, int b) {
+    //   return a + b;
+    // }
+    // int main() {
+    //   int (*f)(int, int) = add;
+    //   printf("%d\n", f(114, 514));
+    //   return 0;
+    // }
     let module = Module{
         name: "func_ptr".to_string(),
         funcs: vec!(
@@ -180,22 +236,24 @@ fn build_func_ptr_test() {
                         "f".to_string(),
                         Type::Func(vec!(Type::Int, Type::Int), box Type::Int),
                         Expr::Literal(Literal::Func("add".to_string()))),
-                    Statement::Return(Expr::Call(
+                    Statement::PrintNum(Expr::Call(
                             box Expr::Load(box Expr::Var("f".to_string())),
                             vec!(
                                 Expr::Literal(Literal::Int(114)),
-                                Expr::Literal(Literal::Int(514)))))),
+                                Expr::Literal(Literal::Int(514))))),
+                    Statement::Return(Expr::Literal(Literal::Int(0)))),
             }),
     };
-    output(module, "func_ptr_test.ll")
+    check(module, "628\n", "func_ptr_test.ll")
 }
 
 #[test]
 fn build_array_test() {
-    // func main() {
-    //   let arr: array[int, 2] = [114, 514];
+    // int main() {
+    //   int arr[2] = {114, 514};
     //   arr[1] = 42;
-    //   return arr[1];
+    //   printf("%d\n", arr[1]);
+    //   return 0;
     // }
     let module = Module {
         name: "array".to_string(),
@@ -217,29 +275,12 @@ fn build_array_test() {
                         box Expr::Var("arr".to_string()),
                         box Expr::Literal(Literal::Int(1))),
                     Expr::Literal(Literal::Int(42))),
-                Statement::Return(Expr::Load(box Expr::ArrayAt(
+                Statement::PrintNum(Expr::Load(box Expr::ArrayAt(
                             box Expr::Var("arr".to_string()),
                             box Expr::Literal(Literal::Int(1))))),
-                ),
-        }),
-    };
-    output(module, "array_test.ll");
-}
-
-#[test]
-fn build_print_num_test() {
-    let module = Module {
-        name: "print_num".to_string(),
-        funcs: vec!(Func {
-            name: "main".to_string(),
-            args: vec!(),
-            ret_type: Type::Int,
-            body: vec!(
-                Statement::PrintNum(Expr::Literal(Literal::Int(42))),
                 Statement::Return(Expr::Literal(Literal::Int(0)))),
         }),
     };
-    output(module, "print_num_test.ll")
+    check(module, "42\n", "array_test.ll");
 }
-
 
