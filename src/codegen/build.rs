@@ -31,6 +31,26 @@ pub fn declare_array(name: &str, typ: LType, init: LValue, base: &Base) -> LValu
     }
 }
 
+pub fn declare_struct(name: &str, typ: LType, init: LValue, base: &Base) -> LValue {
+    let name = cstring(name);
+    let var_ptr_name = fresh_name(NameType::Var, "var_ptr");
+    let init_ptr_name = fresh_name(NameType::Var, "init_ptr");
+    let memcpy_name = cstring("memcpy");
+    unsafe {
+        let var = LLVMBuildAlloca(base.builder, typ, name.as_ptr());
+
+        let var_ptr = LLVMBuildBitCast(base.builder, var, typ::char_ptr(base.context), var_ptr_name.as_ptr());
+        let init_ptr = LLVMBuildBitCast(base.builder, init, typ::char_ptr(base.context), init_ptr_name.as_ptr());
+        let len = typ::size_of(typ);
+
+        let memcpy = LLVMGetNamedFunction(base.module, memcpy_name.as_ptr());
+        let mut args = vec!(var_ptr, init_ptr, len);
+        LLVMBuildCall(base.builder, memcpy, args.as_mut_ptr(), args.len() as libc::c_uint, b"\0".as_ptr() as *const _);
+
+        var
+    }
+}
+
 pub fn store(var: LValue, expr: LValue, builder: LBuilder) -> LValue {
     unsafe {
         LLVMBuildStore(builder, expr, var)

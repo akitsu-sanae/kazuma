@@ -52,6 +52,14 @@ pub fn array(typ: LType, len: usize) -> LType {
     }
 }
 
+pub fn struct_(name: &CString, fields: &mut Vec<LType>, context: LContext) -> LType {
+    unsafe {
+        let struct_ty = LLVMStructCreateNamed(context, name.as_ptr());
+        LLVMStructSetBody(struct_ty, fields.as_mut_ptr(), fields.len() as libc::c_uint, 0);
+        struct_ty
+    }
+}
+
 pub fn type_of(v: LValue) -> LType {
     unsafe {
         LLVMTypeOf(v)

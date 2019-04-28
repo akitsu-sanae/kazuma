@@ -32,6 +32,7 @@ fn build_function_test() {
     // int main() { return 0; }
     let module = Module {
         name: "empty function".to_string(),
+        struct_types: vec!(),
         funcs: vec!(Func {
             name: "main".to_string(),
             args: vec!(),
@@ -50,6 +51,7 @@ fn build_int_literal_test() {
     // }
     let module = Module {
         name: "int literal".to_string(),
+        struct_types: vec!(),
         funcs: vec!(Func {
             name: "main".to_string(),
             args: vec!(),
@@ -70,6 +72,7 @@ fn build_binop_expr_test() {
     // }
     let module = Module {
         name: "binop expr".to_string(),
+        struct_types: vec!(),
         funcs: vec!(Func {
             name: "main".to_string(),
             args: vec!(),
@@ -92,6 +95,7 @@ fn build_if_expr_test() {
     // }
     let module = Module {
         name: "if expr".to_string(),
+        struct_types: vec!(),
         funcs: vec!(Func {
             name: "main".to_string(),
             args: vec!(),
@@ -116,6 +120,7 @@ fn build_var_test() {
     // }
     let module = Module {
         name: "var".to_string(),
+        struct_types: vec!(),
         funcs: vec!(Func {
             name: "main".to_string(),
             args: vec!(),
@@ -142,6 +147,7 @@ fn build_args_test() {
     // }
     let module = Module {
         name: "args".to_string(),
+        struct_types: vec!(),
         funcs: vec!(
             Func {
                 name: "add".to_string(),
@@ -175,6 +181,7 @@ fn build_call_expr_test() {
     // }
     let module = Module{
         name: "call_expr".to_string(),
+        struct_types: vec!(),
         funcs: vec!(
             Func {
                 name: "add".to_string(),
@@ -215,6 +222,7 @@ fn build_func_ptr_test() {
     // }
     let module = Module{
         name: "func_ptr".to_string(),
+        struct_types: vec!(),
         funcs: vec!(
             Func {
                 name: "add".to_string(),
@@ -257,6 +265,7 @@ fn build_array_test() {
     // }
     let module = Module {
         name: "array".to_string(),
+        struct_types: vec!(),
         funcs: vec!(Func {
             name: "main".to_string(),
             args: vec!(),
@@ -282,5 +291,51 @@ fn build_array_test() {
         }),
     };
     check(module, "42\n", "array_test.ll");
+}
+
+#[test]
+fn build_struct_test() {
+    // struct foo_t = {int, int};
+    //
+    // int main() {
+    //   foo_t f = {114, 514};
+    //   f.0 = 42;
+    //   printf("%d\n", f.0 + f.1);
+    //   return 0;
+    // }
+    let module = Module {
+        name: "struct".to_string(),
+        struct_types: vec!(StructDef {
+            name: "foo_t".to_string(),
+            fields: vec!(Type::Int, Type::Int),
+        }),
+        funcs: vec!(Func {
+            name: "main".to_string(),
+            args: vec!(),
+            ret_type: Type::Int,
+            body: vec!(
+                Statement::Declare(
+                    "f".to_string(),
+                    Type::StructVar("foo_t".to_string()),
+                    Expr::Literal(Literal::Struct(
+                            vec!(
+                                Expr::Literal(Literal::Int(114)),
+                                Expr::Literal(Literal::Int(514))),
+                            "foo_t".to_string()))),
+                Statement::Assign(
+                    Expr::StructAt(box Expr::Var("f".to_string()), 0),
+                    Expr::Literal(Literal::Int(42))),
+                Statement::PrintNum(Expr::BinOp(
+                        BinOp::Add,
+                        box Expr::Load(box Expr::StructAt(
+                                box Expr::Var("f".to_string()),
+                                0)),
+                        box Expr::Load(box Expr::StructAt(
+                                box Expr::Var("f".to_string()),
+                                1)))),
+                Statement::Return(Expr::Literal(Literal::Int(0)))),
+        }),
+    };
+    check(module, "556\n", "struct_test.ll");
 }
 

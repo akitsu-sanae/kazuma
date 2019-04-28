@@ -1,8 +1,9 @@
-use typ::Type;
+use typ::{Type, StructDef};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Module {
     pub name: String,
+    pub struct_types: Vec<StructDef>,
     pub funcs: Vec<Func>,
 }
 
@@ -39,6 +40,7 @@ pub enum Expr {
     BinOp(BinOp, Box<Expr>, Box<Expr>),
     If(Box<Expr>, Box<Expr>, Box<Expr>),
     ArrayAt(Box<Expr>, Box<Expr>),
+    StructAt(Box<Expr>, i32),
     Call(Box<Expr>, Vec<Expr>),
     Literal(Literal),
 }
@@ -49,6 +51,7 @@ pub enum Literal {
     Char(char),
     Int(i32),
     Array(Vec<Expr>, Type),
+    Struct(Vec<Expr>, String),
     Func(String),
 }
 

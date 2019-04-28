@@ -1,11 +1,18 @@
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct StructDef {
+    pub name: String,
+    pub fields: Vec<Type>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Type {
     Void, Bool, Char, Int, String,
     Func(Vec<Type>, Box<Type>),
     Array(Box<Type>, usize),
     Pointer(Box<Type>),
+    StructVar(String),
 }
 
 impl Type {
@@ -38,6 +45,7 @@ impl fmt::Display for Type {
             Func(from, to) => write!(f, "{} -> {}", str_of_params(from), to),
             Array(box ref typ, n) => write!(f, "array[{}; {}]", typ, n),
             Pointer(box ref typ) => write!(f, "ptr[{}]", typ),
+            StructVar(ref name) => write!(f, "{}", name),
         }
     }
 }

@@ -11,6 +11,7 @@ pub struct Base {
     pub context: LContext,
     pub module: LModule,
     pub builder: LBuilder,
+    pub struct_env: HashMap<String, LType>,
 }
 
 impl Base {
@@ -23,7 +24,7 @@ impl Base {
 
             self::add_buildin(context, module);
             Base {
-                context, module, builder
+                context, module, builder, struct_env: HashMap::new(),
             }
         }
     }
