@@ -2,6 +2,14 @@
 use super::*;
 use llvm::core::*;
 
+pub fn declare_global(name: &CString, typ: LType, value: LValue, module: LModule) -> LValue {
+    unsafe {
+        let var = LLVMAddGlobal(module, typ, name.as_ptr());
+        LLVMSetInitializer(var, value);
+        var
+    }
+}
+
 pub fn declare(name: &str, typ: LType, init: LValue, builder: LBuilder) -> LValue {
     let name = cstring(name);
      unsafe {

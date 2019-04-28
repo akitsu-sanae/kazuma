@@ -39,8 +39,18 @@ fn apply_module(module: Module, base: &mut Base) -> Result<(), CodegenError> {
         let struct_type = typ::struct_(&cname, &mut fields, base.context);
         base.struct_env.insert(name, struct_type);
     }
+
+    let mut env = Env::new();
+
+    for (name, (typ, expr)) in module.global_var {
+        let typ = apply_type(&typ, &base)?;
+        let init = apply_expr(expr, &env, &base)?;
+        let value = build::declare_global(&cstring(&name), typ, init, base.module);
+        env.insert(name, value);
+    }
+
     for func in module.funcs {
-        apply_func(func, &base)?;
+        apply_func(func, &env, &base)?;
     }
     Ok(())
 }
@@ -70,7 +80,7 @@ fn apply_type(typ: &Type, base: &Base) -> Result<LType, CodegenError> {
     })
 }
 
-fn apply_func(func: Func, base: &Base) -> Result<(), CodegenError> {
+fn apply_func(func: Func, env: &Env, base: &Base) -> Result<(), CodegenError> {
     let param_types: Result<_, _> = func.args.iter()
         .map(|&(_, ref ty)| apply_type(ty, base))
         .collect();
@@ -78,7 +88,7 @@ fn apply_func(func: Func, base: &Base) -> Result<(), CodegenError> {
     let func_typ = typ::func(&mut param_types, apply_type(&func.ret_type, base)?);
     let gen_func = util::add_function(base.module, &func.name, func_typ);
     util::add_entry_block(gen_func, base);
-    let mut env = Env::new();
+    let mut env = env.clone();
     for (i, arg) in func.args.into_iter().enumerate() {
         let typ = param_types[i];
         let var = build::declare(&arg.0, typ, util::get_func_param(gen_func, i), base.builder);

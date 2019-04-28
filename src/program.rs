@@ -1,9 +1,11 @@
 use typ::{Type, StructDef};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Module {
     pub name: String,
     pub struct_types: Vec<StructDef>,
+    pub global_var: HashMap<String, (Type, Expr)>,
     pub funcs: Vec<Func>,
 }
 

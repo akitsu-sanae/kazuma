@@ -15,6 +15,14 @@ pub fn check(module: &Module) -> Result<(), CodegenError> {
         struct_env.insert(struct_def.name, struct_def.fields);
     }
 
+    for (name, (ref typ, ref expr)) in &module.global_var {
+        if *typ == check_expr(expr, &env, &struct_env)? {
+            env.insert(name.clone(), Type::Pointer(box typ.clone()));
+        } else {
+            return Err(TypeCheck(format!("in initializing global var: {:?} is not {:?}", expr, typ)));
+        }
+    }
+
     for func in &module.funcs {
         let typ = Type::Func(
             func.args.iter().cloned().map(|(_, typ)| typ).collect(),
