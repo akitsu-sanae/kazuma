@@ -195,9 +195,9 @@ fn apply_binop_expr(op: BinOp, lhs: Expr, rhs: Expr, env: &Env, base: &Base) -> 
 fn apply_if_expr(cond: Expr, then: Expr, else_: Expr, env: &Env, base: &Base) -> Result<LValue, CodegenError> {
     let cond = apply_expr(cond, env, base)?;
     let insertion_block = util::insertion_block(base.builder);
-    let then_block = append_block("if_then", insertion_block, base);
-    let else_block = append_block("if_else", then_block, base);
-    let merge_block = append_block("if_merge", else_block, base);
+    let then_block = append_block(insertion_block, base);
+    let else_block = append_block(then_block, base);
+    let merge_block = append_block(else_block, base);
 
     build::cond_branch(cond, then_block, else_block, base.builder);
 

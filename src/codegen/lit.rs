@@ -37,11 +37,10 @@ pub fn func(name: CString, module: LModule) -> LValue {
 }
 
 pub fn array(mut elems: Vec<LValue>, typ: LType, module: LModule) -> LValue {
-    let name = fresh_name(NameType::GlobalConst, "array");
     let arr_type = typ::array(typ, elems.len());
     unsafe {
         let arr = LLVMConstArray(typ, elems.as_mut_ptr(), elems.len() as u32);
-        let global_var = LLVMAddGlobal(module, arr_type, name.as_ptr());
+        let global_var = LLVMAddGlobal(module, arr_type, "\0".as_ptr() as *const _);
         LLVMSetInitializer(global_var, arr);
         LLVMSetGlobalConstant(global_var, 1);
         global_var
@@ -49,10 +48,9 @@ pub fn array(mut elems: Vec<LValue>, typ: LType, module: LModule) -> LValue {
 }
 
 pub fn struct_(mut fields: Vec<LValue>, typ: LType, module: LModule) -> LValue {
-    let name = fresh_name(NameType::GlobalConst, "struct");
     unsafe {
         let value = LLVMConstNamedStruct(typ, fields.as_mut_ptr(), fields.len() as libc::c_uint);
-        let global_var = LLVMAddGlobal(module, typ, name.as_ptr());
+        let global_var = LLVMAddGlobal(module, typ, b"\0".as_ptr() as *const _);
         LLVMSetInitializer(global_var, value);
         LLVMSetGlobalConstant(global_var, 1);
         global_var

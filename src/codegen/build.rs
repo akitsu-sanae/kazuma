@@ -21,14 +21,12 @@ pub fn declare(name: &str, typ: LType, init: LValue, builder: LBuilder) -> LValu
 
 pub fn declare_array(name: &str, typ: LType, init: LValue, base: &Base) -> LValue {
     let name = cstring(name);
-    let var_ptr_name = fresh_name(NameType::Var, "var_ptr");
-    let init_ptr_name = fresh_name(NameType::Var, "init_ptr");
     let memcpy_name = cstring("memcpy");
     unsafe {
         let var = LLVMBuildAlloca(base.builder, typ, name.as_ptr());
 
-        let var_ptr = LLVMBuildBitCast(base.builder, var, typ::char_ptr(base.context), var_ptr_name.as_ptr());
-        let init_ptr = LLVMBuildBitCast(base.builder, init, typ::char_ptr(base.context), init_ptr_name.as_ptr());
+        let var_ptr = LLVMBuildBitCast(base.builder, var, typ::char_ptr(base.context), b"\0".as_ptr() as *const _);
+        let init_ptr = LLVMBuildBitCast(base.builder, init, typ::char_ptr(base.context), b"\0".as_ptr() as *const _);
         let len = typ::size_of(typ);
 
         let memcpy = LLVMGetNamedFunction(base.module, memcpy_name.as_ptr());
@@ -41,14 +39,12 @@ pub fn declare_array(name: &str, typ: LType, init: LValue, base: &Base) -> LValu
 
 pub fn declare_struct(name: &str, typ: LType, init: LValue, base: &Base) -> LValue {
     let name = cstring(name);
-    let var_ptr_name = fresh_name(NameType::Var, "var_ptr");
-    let init_ptr_name = fresh_name(NameType::Var, "init_ptr");
     let memcpy_name = cstring("memcpy");
     unsafe {
         let var = LLVMBuildAlloca(base.builder, typ, name.as_ptr());
 
-        let var_ptr = LLVMBuildBitCast(base.builder, var, typ::char_ptr(base.context), var_ptr_name.as_ptr());
-        let init_ptr = LLVMBuildBitCast(base.builder, init, typ::char_ptr(base.context), init_ptr_name.as_ptr());
+        let var_ptr = LLVMBuildBitCast(base.builder, var, typ::char_ptr(base.context), b"\0".as_ptr() as *const _);
+        let init_ptr = LLVMBuildBitCast(base.builder, init, typ::char_ptr(base.context), b"\0".as_ptr() as *const _);
         let len = typ::size_of(typ);
 
         let memcpy = LLVMGetNamedFunction(base.module, memcpy_name.as_ptr());
@@ -66,9 +62,8 @@ pub fn store(var: LValue, expr: LValue, builder: LBuilder) -> LValue {
 }
 
 pub fn load(var: LValue, builder: LBuilder) -> LValue {
-    let name = fresh_name(NameType::Var, "local");
     unsafe {
-        LLVMBuildLoad(builder, var, name.as_ptr())
+        LLVMBuildLoad(builder, var, b"\0".as_ptr() as *const _)
     }
 }
 
@@ -85,30 +80,26 @@ pub fn ret_void(builder: LBuilder) {
 }
 
 pub fn add(lhs: LValue, rhs: LValue, builder: LBuilder) -> LValue {
-    let result = fresh_name(NameType::Var, "add_ret");
     unsafe {
-        LLVMBuildAdd(builder, lhs, rhs, result.as_ptr())
+        LLVMBuildAdd(builder, lhs, rhs, b"\0".as_ptr() as *const _)
     }
 }
 
 pub fn sub(lhs: LValue, rhs: LValue, builder: LBuilder) -> LValue {
-    let result = fresh_name(NameType::Var, "sub_ret");
     unsafe {
-        LLVMBuildSub(builder, lhs, rhs, result.as_ptr())
+        LLVMBuildSub(builder, lhs, rhs, b"\0".as_ptr() as *const _)
     }
 }
 
 pub fn mult(lhs: LValue, rhs: LValue, builder: LBuilder) -> LValue {
-    let result = fresh_name(NameType::Var, "mul_ret");
     unsafe {
-        LLVMBuildMul(builder, lhs, rhs, result.as_ptr())
+        LLVMBuildMul(builder, lhs, rhs, b"\0".as_ptr() as *const _)
     }
 }
 
 pub fn div(lhs: LValue, rhs: LValue, builder: LBuilder) -> LValue {
-    let result = fresh_name(NameType::Var, "div_ret");
     unsafe {
-        LLVMBuildSDiv(builder, lhs, rhs, result.as_ptr() as *const _)
+        LLVMBuildSDiv(builder, lhs, rhs, b"\0".as_ptr() as *const _)
     }
 }
 
@@ -127,9 +118,8 @@ pub fn cond_branch(cond: LValue, then: LBasicBlock, else_: LBasicBlock, builder:
 pub fn phi(typ: LType, incoming: Vec<(LValue, LBasicBlock)>, builder: LBuilder) -> LValue {
     let len = incoming.len();
     let (mut values, mut blocks): (Vec<LValue>, Vec<LBasicBlock>) = incoming.into_iter().unzip();
-    let name = fresh_name(NameType::Var, "phi_ret");
     unsafe {
-        let phi = LLVMBuildPhi(builder, typ, name.as_ptr());
+        let phi = LLVMBuildPhi(builder, typ, b"\0".as_ptr() as *const _);
         LLVMAddIncoming(phi, values.as_mut_ptr(), blocks.as_mut_ptr(), len as libc::c_uint);
         phi
     }
@@ -137,22 +127,20 @@ pub fn phi(typ: LType, incoming: Vec<(LValue, LBasicBlock)>, builder: LBuilder) 
 
 pub fn call(func: LValue, args: &mut Vec<LValue>, builder: LBuilder) -> LValue {
     let len = args.len() as libc::c_uint;
-    let name = fresh_name(NameType::Var, "cal_ret");
     unsafe {
-        LLVMBuildCall(builder, func, args.as_mut_ptr(), len, name.as_ptr())
+        LLVMBuildCall(builder, func, args.as_mut_ptr(), len, b"\0".as_ptr() as *const _)
     }
 }
 
 pub fn gep(arr: LValue, idx: LValue, base: &Base) -> LValue {
     let mut indices = vec!(lit::int32(0, base.context), idx);
-    let name = fresh_name(NameType::Var, "gep_ret");
     unsafe {
         LLVMBuildGEP(
             base.builder,
             arr,
             indices.as_mut_ptr(),
             indices.len() as libc::c_uint,
-            name.as_ptr())
+            b"\0".as_ptr() as *const _)
     }
 }
 
@@ -171,6 +159,5 @@ pub mod buildin {
             call(printf, &mut args, base.builder);
         }
     }
-
 }
 

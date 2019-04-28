@@ -64,42 +64,13 @@ pub fn insertion_block(builder: LBuilder) -> LBasicBlock {
     }
 }
 
-pub fn append_block(label: &str, prev_block: LBasicBlock, base: &Base) -> LBasicBlock {
-    let label = util::fresh_name(NameType::Label, label);
+pub fn append_block(prev_block: LBasicBlock, base: &Base) -> LBasicBlock {
     unsafe {
         let f = LLVMGetBasicBlockParent(LLVMGetInsertBlock(base.builder));
-        let block = LLVMAppendBasicBlockInContext(base.context, f, label.as_ptr());
+        let block = LLVMAppendBasicBlockInContext(base.context, f, b"\0".as_ptr() as *const _);
         LLVMMoveBasicBlockAfter(block, prev_block);
         block
     }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum NameType {
-    Var, Label,
-    GlobalConst,
-}
-
-pub fn fresh_name(name_type: NameType, prefix: &str) -> CString {
-    use self::NameType::*;
-    let typ = match name_type {
-        Var => "var",
-        Label => "label",
-        GlobalConst => "global_const",
-    };
-
-    let mut name_counter = NAME_COUNTER.write().unwrap();
-    let count = match name_counter.get_mut(prefix) {
-        Some(count) => {
-            *count += 1;
-            *count
-        },
-        None => 0,
-    };
-    if count == 0 {
-        name_counter.insert(prefix.to_string(), 0);
-    }
-    CString::new(format!(".gen.{}.{}.{}", typ, prefix, count).as_bytes()).unwrap()
 }
 
 pub fn cstring(s: &str) -> CString {
