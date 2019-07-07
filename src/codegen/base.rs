@@ -22,7 +22,7 @@ impl Base {
             let module = llvm::core::LLVMModuleCreateWithNameInContext(name.as_ptr(), context);
             let builder = llvm::core::LLVMCreateBuilderInContext(context);
 
-            self::add_buildin(context, module);
+            self::add_builtin(context, module);
             Base {
                 context,
                 module,
@@ -44,7 +44,7 @@ impl Drop for Base {
     }
 }
 
-fn add_buildin(context: LContext, module: LModule) {
+fn add_builtin(context: LContext, module: LModule) {
     add_printf_function(context, module);
     add_num_format_str(context, module);
     add_memcpy_function(context, module);
@@ -59,7 +59,7 @@ fn add_printf_function(context: LContext, module: LModule) {
 }
 
 fn add_num_format_str(context: LContext, module: LModule) {
-    let num_format_str = CString::new(".buildin.format.num").unwrap();
+    let num_format_str = CString::new(".builtin.format.num").unwrap();
     let init = lit::str("%d\n", context);
     unsafe {
         let global_var =

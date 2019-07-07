@@ -149,7 +149,7 @@ fn apply_statement(statement: Statement, env: &mut Env, base: &Base) -> Result<(
 
 fn apply_print_num(expr: Expr, env: &Env, base: &Base) -> Result<(), CodegenError> {
     let value = apply_expr(expr, env, base)?;
-    build::buildin::print_num(value, base);
+    build::builtin::print_num(value, base);
     Ok(())
 }
 
