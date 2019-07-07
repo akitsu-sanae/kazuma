@@ -1,5 +1,5 @@
-use std::fmt;
 use std::error::Error;
+use std::fmt;
 
 #[derive(Debug)]
 pub enum CodegenError {
@@ -24,4 +24,3 @@ impl Error for CodegenError {
         "code generation error"
     }
 }
-

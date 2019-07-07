@@ -12,9 +12,10 @@ pub fn validate_module(module: LModule) -> Result<(), CodegenError> {
         LLVMVerifyModule(
             module,
             LLVMVerifierFailureAction::LLVMReturnStatusAction,
-            buf)
+            buf,
+        )
     };
-    if ok != 0  {
+    if ok != 0 {
         let msg_str = unsafe { CString::from_raw(err_msg).into_string().unwrap() };
         Err(CodegenError::ModuleValidation(msg_str))
     } else {
@@ -26,27 +27,24 @@ pub fn print_module(module: LModule) -> Result<String, CodegenError> {
     unsafe {
         let ir = LLVMPrintModuleToString(module);
         let len = libc::strlen(ir);
-        let result = String::from_raw_parts(ir as *mut u8, len+1, len+1);
+        let result = String::from_raw_parts(ir as *mut u8, len + 1, len + 1);
         Ok(result)
     }
 }
 
 pub fn add_function(module: LModule, name: &str, typ: LType) -> LValue {
     let name = cstring(name);
-    unsafe {
-        LLVMAddFunction(module, name.as_ptr(), typ)
-    }
+    unsafe { LLVMAddFunction(module, name.as_ptr(), typ) }
 }
 
 pub fn get_func_param(func: LValue, idx: usize) -> LValue {
-    unsafe {
-        LLVMGetParam(func, idx as libc::c_uint)
-    }
+    unsafe { LLVMGetParam(func, idx as libc::c_uint) }
 }
 
 pub fn add_entry_block(func: LValue, base: &Base) -> LBasicBlock {
     unsafe {
-        let block = LLVMAppendBasicBlockInContext(base.context, func, b"entry\0".as_ptr() as *const _);
+        let block =
+            LLVMAppendBasicBlockInContext(base.context, func, b"entry\0".as_ptr() as *const _);
         LLVMPositionBuilderAtEnd(base.builder, block);
         block
     }
@@ -59,9 +57,7 @@ pub fn position_at_end(block: LBasicBlock, builder: LBuilder) {
 }
 
 pub fn insertion_block(builder: LBuilder) -> LBasicBlock {
-    unsafe {
-        LLVMGetInsertBlock(builder)
-    }
+    unsafe { LLVMGetInsertBlock(builder) }
 }
 
 pub fn append_block(prev_block: LBasicBlock, base: &Base) -> LBasicBlock {
@@ -87,4 +83,3 @@ pub mod i_know_what_i_do {
 lazy_static! {
     static ref NAME_COUNTER: RwLock<HashMap<String, i32>> = RwLock::new(HashMap::new());
 }
-

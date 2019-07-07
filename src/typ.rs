@@ -8,7 +8,11 @@ pub struct StructDef {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Type {
-    Void, Bool, Char, Int, String,
+    Void,
+    Bool,
+    Char,
+    Int,
+    String,
     Func(Vec<Type>, Box<Type>),
     Array(Box<Type>, usize),
     Pointer(Box<Type>),
@@ -20,7 +24,7 @@ impl Type {
         use self::Type::*;
         match self {
             Int => true,
-            _ => false
+            _ => false,
         }
     }
 }
@@ -28,8 +32,9 @@ impl Type {
 pub fn str_of_params(params: &[Type]) -> String {
     match params {
         [] => "()".to_string(),
-        [head, tail..] =>
-            tail.into_iter().fold(format!("{}", head), |acc, typ| format!("{}, {}", acc, typ))
+        [head, tail..] => tail
+            .into_iter()
+            .fold(format!("{}", head), |acc, typ| format!("{}, {}", acc, typ)),
     }
 }
 
@@ -49,4 +54,3 @@ impl fmt::Display for Type {
         }
     }
 }
-

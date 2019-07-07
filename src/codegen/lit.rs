@@ -2,38 +2,30 @@ use super::*;
 use llvm::core::*;
 
 pub fn bool(b: bool, context: LContext) -> LValue {
-    unsafe {
-        LLVMConstInt(LLVMInt1TypeInContext(context), b as u64, 0)
-    }
+    unsafe { LLVMConstInt(LLVMInt1TypeInContext(context), b as u64, 0) }
 }
 
 pub fn char(c: char, context: LContext) -> LValue {
-    unsafe {
-        LLVMConstInt(typ::char(context), c as u64, 0)
-    }
+    unsafe { LLVMConstInt(typ::char(context), c as u64, 0) }
 }
 
 pub fn str(str: &str, context: LContext) -> LValue {
-    let mut bytes: Vec<_> = str.bytes()
-        .map(|c| char(c as char, context))
-        .collect();
+    let mut bytes: Vec<_> = str.bytes().map(|c| char(c as char, context)).collect();
     unsafe {
         LLVMConstArray(
             typ::char(context),
-            bytes.as_mut_ptr(), bytes.len() as libc::c_uint)
+            bytes.as_mut_ptr(),
+            bytes.len() as libc::c_uint,
+        )
     }
 }
 
 pub fn int32(n: i32, context: LContext) -> LValue {
-    unsafe {
-        LLVMConstInt(typ::int32(context), n as u64, 0)
-    }
+    unsafe { LLVMConstInt(typ::int32(context), n as u64, 0) }
 }
 
 pub fn func(name: CString, module: LModule) -> LValue {
-    unsafe {
-        LLVMGetNamedFunction(module, name.as_ptr())
-    }
+    unsafe { LLVMGetNamedFunction(module, name.as_ptr()) }
 }
 
 pub fn array(mut elems: Vec<LValue>, typ: LType, module: LModule) -> LValue {
@@ -56,4 +48,3 @@ pub fn struct_(mut fields: Vec<LValue>, typ: LType, module: LModule) -> LValue {
         global_var
     }
 }
-

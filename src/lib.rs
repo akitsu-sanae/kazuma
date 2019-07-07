@@ -5,19 +5,17 @@
 #[macro_use]
 extern crate lazy_static;
 
-extern crate llvm_sys as llvm;
 extern crate libc;
+extern crate llvm_sys as llvm;
 
-mod program;
-mod typ;
-mod error;
 mod codegen;
-mod typecheck;
+mod error;
+mod program;
 mod test;
-
+mod typ;
+mod typecheck;
 
 pub fn generate(module: program::Module) -> Result<String, error::CodegenError> {
     typecheck::check(&module)?;
     codegen::generate(module)
 }
-

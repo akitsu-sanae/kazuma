@@ -1,23 +1,23 @@
 mod base;
-mod typ;
-mod lit;
 mod build;
+mod lit;
+mod typ;
 mod util;
 
-use std::ffi::CString;
 use std::collections::HashMap;
+use std::ffi::CString;
 
 use crate::*;
 
 pub use self::base::*;
-pub use self::typ::*;
-pub use self::lit::*;
 pub use self::build::*;
+pub use self::lit::*;
+pub use self::typ::*;
 pub use self::util::*;
 
-use crate::typ::{Type, StructDef};
 use crate::error::CodegenError::{self, *};
 use crate::program::*;
+use crate::typ::{StructDef, Type};
 
 type Env = HashMap<String, LValue>;
 
@@ -30,9 +30,10 @@ pub fn generate(module: Module) -> Result<String, CodegenError> {
 }
 
 fn apply_module(module: Module, base: &mut Base) -> Result<(), CodegenError> {
-    for StructDef{name, fields} in module.struct_types {
+    for StructDef { name, fields } in module.struct_types {
         let cname = cstring(&name);
-        let fields: Result<_, _> = fields.into_iter()
+        let fields: Result<_, _> = fields
+            .into_iter()
             .map(|typ| apply_type(&typ, &base))
             .collect();
         let mut fields = fields?;
@@ -71,17 +72,17 @@ fn apply_type(typ: &Type, base: &Base) -> Result<LType, CodegenError> {
         }
         Array(box typ, len) => typ::array(apply_type(typ, base)?, *len),
         Pointer(box typ) => typ::ptr(apply_type(typ, base)?),
-        StructVar(name) => {
-            match base.struct_env.get(name) {
-                None => return Err(ModuleBuilding(format!("unbound struct type: {}", name))),
-                Some(typ) => *typ
-            }
-        }
+        StructVar(name) => match base.struct_env.get(name) {
+            None => return Err(ModuleBuilding(format!("unbound struct type: {}", name))),
+            Some(typ) => *typ,
+        },
     })
 }
 
 fn apply_func(func: Func, env: &Env, base: &Base) -> Result<(), CodegenError> {
-    let param_types: Result<_, _> = func.args.iter()
+    let param_types: Result<_, _> = func
+        .args
+        .iter()
         .map(|&(_, ref ty)| apply_type(ty, base))
         .collect();
     let mut param_types = param_types?;
@@ -119,13 +120,13 @@ fn apply_statement(statement: Statement, env: &mut Env, base: &Base) -> Result<(
             };
             env.insert(name, var);
             Ok(())
-        },
+        }
         Assign(lhs, rhs) => {
             let lhs = apply_expr(lhs, env, base)?;
             let rhs = apply_expr(rhs, env, base)?;
             build::store(lhs, rhs, base.builder);
             Ok(())
-        },
+        }
         Return(expr) => {
             let expr = apply_expr(expr, env, base)?;
             build::ret(expr, base.builder);
@@ -134,15 +135,15 @@ fn apply_statement(statement: Statement, env: &mut Env, base: &Base) -> Result<(
         ReturnVoid => {
             build::ret_void(base.builder);
             Ok(())
-        },
+        }
         Expr(expr) => {
             apply_expr(expr, env, base)?;
             Ok(())
-        },
+        }
         PrintNum(expr) => {
             apply_print_num(expr, env, base)?;
             Ok(())
-        },
+        }
     }
 }
 
@@ -155,7 +156,10 @@ fn apply_print_num(expr: Expr, env: &Env, base: &Base) -> Result<(), CodegenErro
 fn apply_expr(expr: Expr, env: &Env, base: &Base) -> Result<LValue, CodegenError> {
     use program::Expr::*;
     match expr {
-        Var(name) => env.get(&name).cloned().ok_or(ModuleBuilding(format!("unbound variable: {}", name))),
+        Var(name) => env
+            .get(&name)
+            .cloned()
+            .ok_or(ModuleBuilding(format!("unbound variable: {}", name))),
         Load(box expr) => Ok(build::load(apply_expr(expr, env, base)?, base.builder)),
         Literal(lit) => apply_literal(lit, env, base),
         BinOp(op, box lhs, box rhs) => apply_binop_expr(op, lhs, rhs, env, base),
@@ -164,22 +168,31 @@ fn apply_expr(expr: Expr, env: &Env, base: &Base) -> Result<LValue, CodegenError
             let arr = apply_expr(arr, env, base)?;
             let idx = apply_expr(idx, env, base)?;
             Ok(build::gep(arr, idx, base))
-        },
+        }
         StructAt(box expr, idx) => {
             let expr = apply_expr(expr, env, base)?;
             let idx = lit::int32(idx, base.context);
             Ok(build::gep(expr, idx, base))
-        },
+        }
         Call(box func, args) => {
             let func = apply_expr(func, env, base)?;
-            let args: Result<Vec<LValue>, _> = args.into_iter().map(|arg| apply_expr(arg, env, base)).collect();
+            let args: Result<Vec<LValue>, _> = args
+                .into_iter()
+                .map(|arg| apply_expr(arg, env, base))
+                .collect();
             let mut args = args?;
             Ok(build::call(func, &mut args, base.builder))
-        },
+        }
     }
 }
 
-fn apply_binop_expr(op: BinOp, lhs: Expr, rhs: Expr, env: &Env, base: &Base) -> Result<LValue, CodegenError> {
+fn apply_binop_expr(
+    op: BinOp,
+    lhs: Expr,
+    rhs: Expr,
+    env: &Env,
+    base: &Base,
+) -> Result<LValue, CodegenError> {
     use program::BinOp::*;
     let lhs = apply_expr(lhs, env, base)?;
     let rhs = apply_expr(rhs, env, base)?;
@@ -192,7 +205,13 @@ fn apply_binop_expr(op: BinOp, lhs: Expr, rhs: Expr, env: &Env, base: &Base) -> 
     }
 }
 
-fn apply_if_expr(cond: Expr, then: Expr, else_: Expr, env: &Env, base: &Base) -> Result<LValue, CodegenError> {
+fn apply_if_expr(
+    cond: Expr,
+    then: Expr,
+    else_: Expr,
+    env: &Env,
+    base: &Base,
+) -> Result<LValue, CodegenError> {
     let cond = apply_expr(cond, env, base)?;
     let insertion_block = util::insertion_block(base.builder);
     let then_block = append_block(insertion_block, base);
@@ -215,7 +234,11 @@ fn apply_if_expr(cond: Expr, then: Expr, else_: Expr, env: &Env, base: &Base) ->
 
     // code generation for merge-block
     util::position_at_end(merge_block, base.builder);
-    Ok(build::phi(typ::type_of(then), vec!((then, then_block), (else_, else_block)), base.builder))
+    Ok(build::phi(
+        typ::type_of(then),
+        vec![(then, then_block), (else_, else_block)],
+        base.builder,
+    ))
 }
 
 fn apply_literal(lit: Literal, env: &Env, base: &Base) -> Result<LValue, CodegenError> {
@@ -226,17 +249,22 @@ fn apply_literal(lit: Literal, env: &Env, base: &Base) -> Result<LValue, Codegen
         Func(name) => Ok(lit::func(cstring(&name), base.module)),
         Array(elems, typ) => {
             let typ = apply_type(&typ, base)?;
-            let elems: Result<Vec<_>, _> = elems.into_iter().map(|e| apply_expr(e, env, base)).collect();
+            let elems: Result<Vec<_>, _> = elems
+                .into_iter()
+                .map(|e| apply_expr(e, env, base))
+                .collect();
             let elems = elems?;
             Ok(lit::array(elems, typ, base.module))
-        },
+        }
         Struct(fields, struct_name) => {
-            let fields: Result<Vec<_>, _> = fields.into_iter().map(|e| apply_expr(e, env, base)).collect();
+            let fields: Result<Vec<_>, _> = fields
+                .into_iter()
+                .map(|e| apply_expr(e, env, base))
+                .collect();
             let fields = fields?;
             let typ = base.struct_env.get(&struct_name).unwrap();
             Ok(lit::struct_(fields, *typ, base.module))
-        },
+        }
         _ => unimplemented!(),
     }
 }
-

@@ -1,5 +1,5 @@
-use typ::{Type, StructDef};
 use std::collections::HashMap;
+use typ::{StructDef, Type};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Module {
@@ -31,8 +31,16 @@ pub enum Statement {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BinOp {
-    Add, Sub, Mult, Div,
-    Eq, Neq, Gt, Geq, Lt, Leq,
+    Add,
+    Sub,
+    Mult,
+    Div,
+    Eq,
+    Neq,
+    Gt,
+    Geq,
+    Lt,
+    Leq,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -56,4 +64,3 @@ pub enum Literal {
     Struct(Vec<Expr>, String),
     Func(String),
 }
-

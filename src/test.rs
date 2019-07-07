@@ -1,4 +1,3 @@
-
 use crate::program::*;
 use crate::typ::*;
 
@@ -26,14 +25,16 @@ fn check(module: Module, expected: &str, filename: &str) {
     use std::process::Command;
     use std::str;
     let filename = format!("./test/{}", filename);
-    { // write llvm-ir
+    {
+        // write llvm-ir
         let mut f = fs::File::create(&filename).unwrap();
         match crate::generate(module) {
             Ok(code) => write!(f, "{}", code).unwrap(),
             Err(err) => panic!("{}", err),
         }
     }
-    { // run & check
+    {
+        // run & check
         let result = Command::new("lli")
             .arg(&filename)
             .output()
@@ -49,14 +50,14 @@ fn build_function_test() {
     // int main() { return 0; }
     let module = Module {
         name: "empty function".to_string(),
-        struct_types: vec!(),
-        global_var: hashmap!{},
-        funcs: vec!(Func {
+        struct_types: vec![],
+        global_var: hashmap! {},
+        funcs: vec![Func {
             name: "main".to_string(),
-            args: vec!(),
+            args: vec![],
             ret_type: Type::Int,
-            body: vec!(Statement::Return(Expr::Literal(Literal::Int(0)))),
-        }),
+            body: vec![Statement::Return(Expr::Literal(Literal::Int(0)))],
+        }],
     };
     check(module, "", "function_test.ll")
 }
@@ -69,16 +70,17 @@ fn build_int_literal_test() {
     // }
     let module = Module {
         name: "int literal".to_string(),
-        struct_types: vec!(),
-        global_var: hashmap!{},
-        funcs: vec!(Func {
+        struct_types: vec![],
+        global_var: hashmap! {},
+        funcs: vec![Func {
             name: "main".to_string(),
-            args: vec!(),
+            args: vec![],
             ret_type: Type::Int,
-            body: vec!(
+            body: vec![
                 Statement::PrintNum(Expr::Literal(Literal::Int(42))),
-                Statement::Return(Expr::Literal(Literal::Int(0)))),
-        }),
+                Statement::Return(Expr::Literal(Literal::Int(0))),
+            ],
+        }],
     };
     check(module, "42\n", "int_literal_test.ll")
 }
@@ -91,19 +93,21 @@ fn build_binop_expr_test() {
     // }
     let module = Module {
         name: "binop expr".to_string(),
-        struct_types: vec!(),
-        global_var: hashmap!{},
-        funcs: vec!(Func {
+        struct_types: vec![],
+        global_var: hashmap! {},
+        funcs: vec![Func {
             name: "main".to_string(),
-            args: vec!(),
+            args: vec![],
             ret_type: Type::Int,
-            body: vec!(
+            body: vec![
                 Statement::PrintNum(Expr::BinOp(
-                        BinOp::Add,
-                        box Expr::Literal(Literal::Int(114)),
-                        box Expr::Literal(Literal::Int(514)))),
-                Statement::Return(Expr::Literal(Literal::Int(0)))),
-        }),
+                    BinOp::Add,
+                    box Expr::Literal(Literal::Int(114)),
+                    box Expr::Literal(Literal::Int(514)),
+                )),
+                Statement::Return(Expr::Literal(Literal::Int(0))),
+            ],
+        }],
     };
     check(module, "628\n", "binop_expr_test.ll")
 }
@@ -115,19 +119,21 @@ fn build_if_expr_test() {
     // }
     let module = Module {
         name: "if expr".to_string(),
-        struct_types: vec!(),
-        global_var: hashmap!{},
-        funcs: vec!(Func {
+        struct_types: vec![],
+        global_var: hashmap! {},
+        funcs: vec![Func {
             name: "main".to_string(),
-            args: vec!(),
+            args: vec![],
             ret_type: Type::Int,
-            body: vec!(
+            body: vec![
                 Statement::PrintNum(Expr::If(
-                        box Expr::Literal(Literal::Bool(true)),
-                        box Expr::Literal(Literal::Int(114)),
-                        box Expr::Literal(Literal::Int(514)))),
-                Statement::Return(Expr::Literal(Literal::Int(0))))
-        }),
+                    box Expr::Literal(Literal::Bool(true)),
+                    box Expr::Literal(Literal::Int(114)),
+                    box Expr::Literal(Literal::Int(514)),
+                )),
+                Statement::Return(Expr::Literal(Literal::Int(0))),
+            ],
+        }],
     };
     check(module, "114\n", "if_expr_test.ll")
 }
@@ -141,20 +147,18 @@ fn build_var_test() {
     // }
     let module = Module {
         name: "var".to_string(),
-        struct_types: vec!(),
-        global_var: hashmap!{},
-        funcs: vec!(Func {
+        struct_types: vec![],
+        global_var: hashmap! {},
+        funcs: vec![Func {
             name: "main".to_string(),
-            args: vec!(),
+            args: vec![],
             ret_type: Type::Int,
-            body: vec!(
-                Statement::Declare(
-                    "a".to_string(),
-                    Type::Int,
-                    Expr::Literal(Literal::Int(42))),
+            body: vec![
+                Statement::Declare("a".to_string(), Type::Int, Expr::Literal(Literal::Int(42))),
                 Statement::PrintNum(Expr::Load(box Expr::Var("a".to_string()))),
-                Statement::Return(Expr::Literal(Literal::Int(0))))
-        }),
+                Statement::Return(Expr::Literal(Literal::Int(0))),
+            ],
+        }],
     };
     check(module, "42\n", "var_expr_test.ll")
 }
@@ -169,26 +173,26 @@ fn build_args_test() {
     // }
     let module = Module {
         name: "args".to_string(),
-        struct_types: vec!(),
-        global_var: hashmap!{},
-        funcs: vec!(
+        struct_types: vec![],
+        global_var: hashmap! {},
+        funcs: vec![
             Func {
                 name: "add".to_string(),
-                args: vec!(
-                    ("a".to_string(), Type::Int),
-                    ("b".to_string(), Type::Int)),
+                args: vec![("a".to_string(), Type::Int), ("b".to_string(), Type::Int)],
                 ret_type: Type::Int,
-                body: vec!(Statement::Return(Expr::BinOp(
-                            BinOp::Add,
-                            box Expr::Load(box Expr::Var("a".to_string())),
-                            box Expr::Load(box Expr::Var("b".to_string()))))),
+                body: vec![Statement::Return(Expr::BinOp(
+                    BinOp::Add,
+                    box Expr::Load(box Expr::Var("a".to_string())),
+                    box Expr::Load(box Expr::Var("b".to_string())),
+                ))],
             },
             Func {
                 name: "main".to_string(),
-                args: vec!(),
+                args: vec![],
                 ret_type: Type::Int,
-                body: vec!(Statement::Return(Expr::Literal(Literal::Int(0)))),
-            }),
+                body: vec![Statement::Return(Expr::Literal(Literal::Int(0)))],
+            },
+        ],
     };
     check(module, "", "args_test.ll")
 }
@@ -202,34 +206,37 @@ fn build_call_expr_test() {
     //   printf("%d\n", add(114, 514));
     //   return 0;
     // }
-    let module = Module{
+    let module = Module {
         name: "call_expr".to_string(),
-        struct_types: vec!(),
-        global_var: hashmap!{},
-        funcs: vec!(
+        struct_types: vec![],
+        global_var: hashmap! {},
+        funcs: vec![
             Func {
                 name: "add".to_string(),
-                args: vec!(
-                    ("a".to_string(), Type::Int),
-                    ("b".to_string(), Type::Int)),
+                args: vec![("a".to_string(), Type::Int), ("b".to_string(), Type::Int)],
                 ret_type: Type::Int,
-                body: vec!(Statement::Return(Expr::BinOp(
-                            BinOp::Add,
-                            box Expr::Load(box Expr::Var("a".to_string())),
-                            box Expr::Load(box Expr::Var("b".to_string()))))),
+                body: vec![Statement::Return(Expr::BinOp(
+                    BinOp::Add,
+                    box Expr::Load(box Expr::Var("a".to_string())),
+                    box Expr::Load(box Expr::Var("b".to_string())),
+                ))],
             },
             Func {
-                name : "main".to_string(),
-                args: vec!(),
+                name: "main".to_string(),
+                args: vec![],
                 ret_type: Type::Int,
-                body: vec!(
+                body: vec![
                     Statement::PrintNum(Expr::Call(
-                            box Expr::Literal(Literal::Func("add".to_string())),
-                            vec!(
-                                Expr::Literal(Literal::Int(114)),
-                                Expr::Literal(Literal::Int(514))))),
-                    Statement::Return(Expr::Literal(Literal::Int(0)))),
-            }),
+                        box Expr::Literal(Literal::Func("add".to_string())),
+                        vec![
+                            Expr::Literal(Literal::Int(114)),
+                            Expr::Literal(Literal::Int(514)),
+                        ],
+                    )),
+                    Statement::Return(Expr::Literal(Literal::Int(0))),
+                ],
+            },
+        ],
     };
     check(module, "628\n", "call_expr_test.ll")
 }
@@ -246,36 +253,40 @@ fn build_func_ptr_test() {
     // }
     let module = Module {
         name: "func_ptr".to_string(),
-        struct_types: vec!(),
-        global_var: hashmap!{},
-        funcs: vec!(
+        struct_types: vec![],
+        global_var: hashmap! {},
+        funcs: vec![
             Func {
                 name: "add".to_string(),
-                args: vec!(
-                    ("a".to_string(), Type::Int),
-                    ("b".to_string(), Type::Int)),
+                args: vec![("a".to_string(), Type::Int), ("b".to_string(), Type::Int)],
                 ret_type: Type::Int,
-                body: vec!(Statement::Return(Expr::BinOp(
-                            BinOp::Add,
-                            box Expr::Load(box Expr::Var("a".to_string())),
-                            box Expr::Load(box Expr::Var("b".to_string()))))),
+                body: vec![Statement::Return(Expr::BinOp(
+                    BinOp::Add,
+                    box Expr::Load(box Expr::Var("a".to_string())),
+                    box Expr::Load(box Expr::Var("b".to_string())),
+                ))],
             },
             Func {
-                name : "main".to_string(),
-                args: vec!(),
+                name: "main".to_string(),
+                args: vec![],
                 ret_type: Type::Int,
-                body: vec!(
+                body: vec![
                     Statement::Declare(
                         "f".to_string(),
-                        Type::Pointer(box Type::Func(vec!(Type::Int, Type::Int), box Type::Int)),
-                        Expr::Literal(Literal::Func("add".to_string()))),
+                        Type::Pointer(box Type::Func(vec![Type::Int, Type::Int], box Type::Int)),
+                        Expr::Literal(Literal::Func("add".to_string())),
+                    ),
                     Statement::PrintNum(Expr::Call(
-                            box Expr::Load(box Expr::Var("f".to_string())),
-                            vec!(
-                                Expr::Literal(Literal::Int(114)),
-                                Expr::Literal(Literal::Int(514))))),
-                    Statement::Return(Expr::Literal(Literal::Int(0)))),
-            }),
+                        box Expr::Load(box Expr::Var("f".to_string())),
+                        vec![
+                            Expr::Literal(Literal::Int(114)),
+                            Expr::Literal(Literal::Int(514)),
+                        ],
+                    )),
+                    Statement::Return(Expr::Literal(Literal::Int(0))),
+                ],
+            },
+        ],
     };
     check(module, "628\n", "func_ptr_test.ll")
 }
@@ -290,31 +301,38 @@ fn build_array_test() {
     // }
     let module = Module {
         name: "array".to_string(),
-        struct_types: vec!(),
-        global_var: hashmap!{},
-        funcs: vec!(Func {
+        struct_types: vec![],
+        global_var: hashmap! {},
+        funcs: vec![Func {
             name: "main".to_string(),
-            args: vec!(),
+            args: vec![],
             ret_type: Type::Int,
-            body: vec!(
+            body: vec![
                 Statement::Declare(
                     "arr".to_string(),
                     Type::Array(box Type::Int, 2),
                     Expr::Literal(Literal::Array(
-                            vec!(
-                                Expr::Literal(Literal::Int(114)),
-                                Expr::Literal(Literal::Int(514))),
-                            Type::Int))),
+                        vec![
+                            Expr::Literal(Literal::Int(114)),
+                            Expr::Literal(Literal::Int(514)),
+                        ],
+                        Type::Int,
+                    )),
+                ),
                 Statement::Assign(
                     Expr::ArrayAt(
                         box Expr::Var("arr".to_string()),
-                        box Expr::Literal(Literal::Int(1))),
-                    Expr::Literal(Literal::Int(42))),
+                        box Expr::Literal(Literal::Int(1)),
+                    ),
+                    Expr::Literal(Literal::Int(42)),
+                ),
                 Statement::PrintNum(Expr::Load(box Expr::ArrayAt(
-                            box Expr::Var("arr".to_string()),
-                            box Expr::Literal(Literal::Int(1))))),
-                Statement::Return(Expr::Literal(Literal::Int(0)))),
-        }),
+                    box Expr::Var("arr".to_string()),
+                    box Expr::Literal(Literal::Int(1)),
+                ))),
+                Statement::Return(Expr::Literal(Literal::Int(0))),
+            ],
+        }],
     };
     check(module, "42\n", "array_test.ll");
 }
@@ -331,37 +349,39 @@ fn build_struct_test() {
     // }
     let module = Module {
         name: "struct".to_string(),
-        struct_types: vec!(StructDef {
+        struct_types: vec![StructDef {
             name: "foo_t".to_string(),
-            fields: vec!(Type::Int, Type::Int),
-        }),
-        global_var: hashmap!{},
-        funcs: vec!(Func {
+            fields: vec![Type::Int, Type::Int],
+        }],
+        global_var: hashmap! {},
+        funcs: vec![Func {
             name: "main".to_string(),
-            args: vec!(),
+            args: vec![],
             ret_type: Type::Int,
-            body: vec!(
+            body: vec![
                 Statement::Declare(
                     "f".to_string(),
                     Type::StructVar("foo_t".to_string()),
                     Expr::Literal(Literal::Struct(
-                            vec!(
-                                Expr::Literal(Literal::Int(114)),
-                                Expr::Literal(Literal::Int(514))),
-                            "foo_t".to_string()))),
+                        vec![
+                            Expr::Literal(Literal::Int(114)),
+                            Expr::Literal(Literal::Int(514)),
+                        ],
+                        "foo_t".to_string(),
+                    )),
+                ),
                 Statement::Assign(
                     Expr::StructAt(box Expr::Var("f".to_string()), 0),
-                    Expr::Literal(Literal::Int(42))),
+                    Expr::Literal(Literal::Int(42)),
+                ),
                 Statement::PrintNum(Expr::BinOp(
-                        BinOp::Add,
-                        box Expr::Load(box Expr::StructAt(
-                                box Expr::Var("f".to_string()),
-                                0)),
-                        box Expr::Load(box Expr::StructAt(
-                                box Expr::Var("f".to_string()),
-                                1)))),
-                Statement::Return(Expr::Literal(Literal::Int(0)))),
-        }),
+                    BinOp::Add,
+                    box Expr::Load(box Expr::StructAt(box Expr::Var("f".to_string()), 0)),
+                    box Expr::Load(box Expr::StructAt(box Expr::Var("f".to_string()), 1)),
+                )),
+                Statement::Return(Expr::Literal(Literal::Int(0))),
+            ],
+        }],
     };
     check(module, "556\n", "struct_test.ll");
 }
@@ -378,40 +398,47 @@ fn build_global_var_test() {
     // }
     let module = Module {
         name: "global_var".to_string(),
-        struct_types: vec!(),
-        global_var: hashmap!{"counter".to_string() => (Type::Int, Expr::Literal(Literal::Int(0)))},
-        funcs: vec!(
+        struct_types: vec![],
+        global_var: hashmap! {"counter".to_string() => (Type::Int, Expr::Literal(Literal::Int(0)))},
+        funcs: vec![
             Func {
                 name: "incr".to_string(),
-                args: vec!(),
+                args: vec![],
                 ret_type: Type::Void,
-                body: vec!(
+                body: vec![
                     Statement::Assign(
                         Expr::Var("counter".to_string()),
                         Expr::BinOp(
                             BinOp::Add,
                             box Expr::Load(box Expr::Var("counter".to_string())),
-                            box Expr::Literal(Literal::Int(1)))),
-                    Statement::ReturnVoid),
+                            box Expr::Literal(Literal::Int(1)),
+                        ),
+                    ),
+                    Statement::ReturnVoid,
+                ],
             },
             Func {
                 name: "main".to_string(),
-                args: vec!(),
+                args: vec![],
                 ret_type: Type::Int,
-                body: vec!(
+                body: vec![
                     Statement::Expr(Expr::Call(
                         box Expr::Literal(Literal::Func("incr".to_string())),
-                        vec!())),
+                        vec![],
+                    )),
                     Statement::Expr(Expr::Call(
                         box Expr::Literal(Literal::Func("incr".to_string())),
-                        vec!())),
+                        vec![],
+                    )),
                     Statement::Expr(Expr::Call(
                         box Expr::Literal(Literal::Func("incr".to_string())),
-                        vec!())),
+                        vec![],
+                    )),
                     Statement::PrintNum(Expr::Load(box Expr::Var("counter".to_string()))),
-                    Statement::Return(Expr::Literal(Literal::Int(0)))),
-            }),
+                    Statement::Return(Expr::Literal(Literal::Int(0))),
+                ],
+            },
+        ],
     };
     check(module, "3\n", "global_var_test.ll");
 }
-

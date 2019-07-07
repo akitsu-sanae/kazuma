@@ -24,7 +24,10 @@ impl Base {
 
             self::add_buildin(context, module);
             Base {
-                context, module, builder, struct_env: HashMap::new(),
+                context,
+                module,
+                builder,
+                struct_env: HashMap::new(),
             }
         }
     }
@@ -49,9 +52,7 @@ fn add_buildin(context: LContext, module: LModule) {
 
 fn add_printf_function(context: LContext, module: LModule) {
     let name = CString::new("printf").unwrap();
-    let typ = typ::variadic_func(
-        &mut vec!(typ::char_ptr(context)),
-        typ::int32(context));
+    let typ = typ::variadic_func(&mut vec![typ::char_ptr(context)], typ::int32(context));
     unsafe {
         llvm::core::LLVMAddFunction(module, name.as_ptr(), typ);
     }
@@ -61,7 +62,8 @@ fn add_num_format_str(context: LContext, module: LModule) {
     let num_format_str = CString::new(".buildin.format.num").unwrap();
     let init = lit::str("%d\n", context);
     unsafe {
-        let global_var = llvm::core::LLVMAddGlobal(module, typ::type_of(init), num_format_str.as_ptr());
+        let global_var =
+            llvm::core::LLVMAddGlobal(module, typ::type_of(init), num_format_str.as_ptr());
         llvm::core::LLVMSetInitializer(global_var, init);
     }
 }
@@ -69,10 +71,10 @@ fn add_num_format_str(context: LContext, module: LModule) {
 fn add_memcpy_function(context: LContext, module: LModule) {
     let name = CString::new("memcpy").unwrap();
     let typ = typ::variadic_func(
-        &mut vec!(typ::char_ptr(context), typ::char_ptr(context)),
-        typ::void(context));
+        &mut vec![typ::char_ptr(context), typ::char_ptr(context)],
+        typ::void(context),
+    );
     unsafe {
         llvm::core::LLVMAddFunction(module, name.as_ptr(), typ);
     }
 }
-

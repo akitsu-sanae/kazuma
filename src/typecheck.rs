@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
-use typ::*;
-use program::*;
 use error::CodegenError::{self, *};
+use program::*;
+use typ::*;
 
 type Env = HashMap<String, Type>;
 type StructEnv = HashMap<String, Vec<Type>>;
@@ -19,14 +19,18 @@ pub fn check(module: &Module) -> Result<(), CodegenError> {
         if *typ == check_expr(expr, &env, &struct_env)? {
             env.insert(name.clone(), Type::Pointer(box typ.clone()));
         } else {
-            return Err(TypeCheck(format!("in initializing global var: {:?} is not {:?}", expr, typ)));
+            return Err(TypeCheck(format!(
+                "in initializing global var: {:?} is not {:?}",
+                expr, typ
+            )));
         }
     }
 
     for func in &module.funcs {
         let typ = Type::Func(
             func.args.iter().cloned().map(|(_, typ)| typ).collect(),
-            box func.ret_type.clone());
+            box func.ret_type.clone(),
+        );
         env.insert(func.name.to_string(), typ);
     }
 
@@ -40,9 +44,13 @@ pub fn check(module: &Module) -> Result<(), CodegenError> {
     Ok(())
 }
 
-fn check_body(statements: &Vec<Statement>, env: &Env, struct_env: &StructEnv) -> Result<Type, CodegenError> {
+fn check_body(
+    statements: &Vec<Statement>,
+    env: &Env,
+    struct_env: &StructEnv,
+) -> Result<Type, CodegenError> {
     let mut env = env.clone();
-    let mut rets = vec!();
+    let mut rets = vec![];
     for statement in statements {
         if let Some(ret) = check_statement(statement, &mut env, struct_env)? {
             rets.push(ret);
@@ -55,11 +63,18 @@ fn check_body(statements: &Vec<Statement>, env: &Env, struct_env: &StructEnv) ->
     } else if rets.len() == 1 {
         Ok(rets.pop().unwrap())
     } else {
-        Err(TypeCheck(format!("multiple return types, {}", str_of_params(&rets))))
+        Err(TypeCheck(format!(
+            "multiple return types, {}",
+            str_of_params(&rets)
+        )))
     }
 }
 
-fn check_statement(statement: &Statement, env: &mut Env, struct_env: &StructEnv) -> Result<Option<Type>, CodegenError> {
+fn check_statement(
+    statement: &Statement,
+    env: &mut Env,
+    struct_env: &StructEnv,
+) -> Result<Option<Type>, CodegenError> {
     use program::Statement::*;
     match statement {
         Declare(ref name, ref typ, ref expr) => {
@@ -69,64 +84,72 @@ fn check_statement(statement: &Statement, env: &mut Env, struct_env: &StructEnv)
                 env.insert(name.to_string(), typ);
                 Ok(None)
             } else {
-                Err(TypeCheck(format!("{} has type {}, but initialized by type {}", name, typ, r_type)))
+                Err(TypeCheck(format!(
+                    "{} has type {}, but initialized by type {}",
+                    name, typ, r_type
+                )))
             }
-        },
+        }
         Assign(ref lhs, ref rhs) => {
             let l_type = check_expr(lhs, env, struct_env)?;
             let r_type = check_expr(rhs, env, struct_env)?;
             if l_type == Type::Pointer(box r_type.clone()) {
                 Ok(None)
             } else {
-                Err(TypeCheck(format!("can not assign {} into {}", r_type, l_type)))
+                Err(TypeCheck(format!(
+                    "can not assign {} into {}",
+                    r_type, l_type
+                )))
             }
-        },
+        }
         Return(ref expr) => Ok(Some(check_expr(expr, env, struct_env)?)),
         ReturnVoid => Ok(Some(Type::Void)),
         Expr(ref expr) => {
             check_expr(expr, env, struct_env)?;
             Ok(None)
-        },
+        }
         PrintNum(expr) => {
             if Type::Int == check_expr(expr, env, struct_env)? {
                 Ok(None)
             } else {
                 Err(TypeCheck(format!("can not print non-integer, {:?}", expr)))
             }
-        },
+        }
     }
 }
 
 fn check_expr(expr: &Expr, env: &Env, struct_env: &StructEnv) -> Result<Type, CodegenError> {
     use program::Expr::*;
     match expr {
-        Var(ref name) =>
-            env.get(name).cloned().ok_or(TypeCheck(format!("unbound variable {}", name))),
-        Load(box expr) => {
-            match check_expr(expr, env, struct_env)? {
-                Type::Pointer(box typ) => Ok(typ),
-                typ => Err(TypeCheck(format!("can not load from non-pointer type, that is {}", typ)))
-            }
-        }
+        Var(ref name) => env
+            .get(name)
+            .cloned()
+            .ok_or(TypeCheck(format!("unbound variable {}", name))),
+        Load(box expr) => match check_expr(expr, env, struct_env)? {
+            Type::Pointer(box typ) => Ok(typ),
+            typ => Err(TypeCheck(format!(
+                "can not load from non-pointer type, that is {}",
+                typ
+            ))),
+        },
         BinOp(op, box ref lhs, box ref rhs) => {
             let lhs = check_expr(lhs, env, struct_env)?;
             let rhs = check_expr(rhs, env, struct_env)?;
             use program::BinOp::*;
             match (op, &lhs, &rhs) {
-                (Add, Type::Int, Type::Int) |
-                (Sub, Type::Int, Type::Int) |
-                (Mult, Type::Int, Type::Int) |
-                (Div, Type::Int, Type::Int)  => Ok(Type::Int),
+                (Add, Type::Int, Type::Int)
+                | (Sub, Type::Int, Type::Int)
+                | (Mult, Type::Int, Type::Int)
+                | (Div, Type::Int, Type::Int) => Ok(Type::Int),
 
-                (Eq, lhs, rhs) |
-                (Neq, lhs, rhs) if lhs == rhs => Ok(Type::Bool),
+                (Eq, lhs, rhs) | (Neq, lhs, rhs) if lhs == rhs => Ok(Type::Bool),
 
-                (Gt, Type::Int, Type::Int) |
-                (Geq, Type::Int, Type::Int) |
-                (Lt, Type::Int, Type::Int) |
-                (Leq, Type::Int, Type::Int) => Ok(Type::Bool),
+                (Gt, Type::Int, Type::Int)
+                | (Geq, Type::Int, Type::Int)
+                | (Lt, Type::Int, Type::Int)
+                | (Leq, Type::Int, Type::Int) => Ok(Type::Bool),
 
-                _ => Err(TypeCheck(format!("unmatch {} vs {}", lhs, rhs)))
+                _ => Err(TypeCheck(format!("unmatch {} vs {}", lhs, rhs))),
             }
         }
         If(box ref cond, box ref then, box ref else_) => {
@@ -136,11 +159,14 @@ fn check_expr(expr: &Expr, env: &Env, struct_env: &StructEnv) -> Result<Type, Co
             if Type::Bool != cond {
                 Err(TypeCheck(format!("condition must be bool, but {}", cond)))
             } else if then != else_ {
-                Err(TypeCheck(format!("condition branches must have same type. but {} vs {}", then, else_)))
+                Err(TypeCheck(format!(
+                    "condition branches must have same type. but {} vs {}",
+                    then, else_
+                )))
             } else {
                 Ok(then)
             }
-        },
+        }
         ArrayAt(box arr, box idx) => {
             let arr_type = check_expr(arr, env, struct_env)?;
             match arr_type {
@@ -150,40 +176,69 @@ fn check_expr(expr: &Expr, env: &Env, struct_env: &StructEnv) -> Result<Type, Co
                         // TODO: check idx is valid when idx is constant
                         Ok(Type::Pointer(inner_type))
                     } else {
-                        Err(TypeCheck(format!("can not use `[]` operator with a non-integer parameter, that is {}", idx_type)))
+                        Err(TypeCheck(format!(
+                            "can not use `[]` operator with a non-integer parameter, that is {}",
+                            idx_type
+                        )))
                     }
-                },
-                typ => Err(TypeCheck(format!("can not use `[]` operator for non-array type, that is {}", typ)))
+                }
+                typ => Err(TypeCheck(format!(
+                    "can not use `[]` operator for non-array type, that is {}",
+                    typ
+                ))),
             }
-        },
+        }
         StructAt(box expr, idx) => {
             if let Type::Pointer(box Type::StructVar(name)) = check_expr(expr, env, struct_env)? {
-                let fields = struct_env.get(&name).ok_or(TypeCheck(format!("undefined struct: {}", name)))?;
-                let typ = fields.iter().nth(*idx as usize).cloned().ok_or(TypeCheck(format!("invalid field index {} of {}", idx, name)))?;
+                let fields = struct_env
+                    .get(&name)
+                    .ok_or(TypeCheck(format!("undefined struct: {}", name)))?;
+                let typ = fields
+                    .iter()
+                    .nth(*idx as usize)
+                    .cloned()
+                    .ok_or(TypeCheck(format!(
+                        "invalid field index {} of {}",
+                        idx, name
+                    )))?;
                 Ok(Type::Pointer(box typ))
             } else {
-                Err(TypeCheck(format!("can not access non-struct field: {:?}", expr)))
+                Err(TypeCheck(format!(
+                    "can not access non-struct field: {:?}",
+                    expr
+                )))
             }
-        },
+        }
         Call(func, args) => {
             let func_type = check_expr(func, env, struct_env)?;
-            let args: Result<_, _> = args.iter().map(|arg| check_expr(arg, env, struct_env)).collect();
+            let args: Result<_, _> = args
+                .iter()
+                .map(|arg| check_expr(arg, env, struct_env))
+                .collect();
             let arg_types: Vec<Type> = args?;
-            let func_type = if let Type::Pointer(box typ) = func_type { typ } else { unreachable!() };
+            let func_type = if let Type::Pointer(box typ) = func_type {
+                typ
+            } else {
+                unreachable!()
+            };
             match func_type {
                 Type::Func(param_types, box ret_type) => {
                     if arg_types == param_types {
                         Ok(ret_type)
                     } else {
                         Err(TypeCheck(format!(
-                                    "mismatch param types: {} vs {}",
-                                    str_of_params(&arg_types),
-                                    str_of_params(&param_types))))
+                            "mismatch param types: {} vs {}",
+                            str_of_params(&arg_types),
+                            str_of_params(&param_types)
+                        )))
                     }
-                },
-                typ => Err(TypeCheck(format!("can not apply for non-functional type: {}", typ))),
+                }
+                typ => Err(TypeCheck(format!(
+                    "can not apply for non-functional type: {}",
+                    typ
+                ))),
             }
-        },
+        }
         Literal(ref lit) => Ok(type_of_lit(lit, env, struct_env)?),
     }
 }
@@ -194,18 +249,30 @@ fn type_of_lit(lit: &Literal, env: &Env, struct_env: &StructEnv) -> Result<Type,
         Bool(_) => Type::Bool,
         Char(_) => Type::Char,
         Int(_) => Type::Int,
-        Func(name) => Type::Pointer(box env.get(name).cloned().ok_or(TypeCheck(format!("unknown function {}", name)))?),
+        Func(name) => Type::Pointer(
+            box env
+                .get(name)
+                .cloned()
+                .ok_or(TypeCheck(format!("unknown function {}", name)))?,
+        ),
         Array(elems, typ) => Type::Array(box typ.clone(), elems.len()),
         Struct(exprs, name) => {
-            let fields = struct_env.get(name).ok_or(TypeCheck(format!("undefined struct: {}", name)))?;
-            let expr_types: Result<Vec<_>, _> = exprs.iter().map(|expr| check_expr(expr, env, struct_env)).collect();
+            let fields = struct_env
+                .get(name)
+                .ok_or(TypeCheck(format!("undefined struct: {}", name)))?;
+            let expr_types: Result<Vec<_>, _> = exprs
+                .iter()
+                .map(|expr| check_expr(expr, env, struct_env))
+                .collect();
             let expr_types = expr_types?;
             if fields == &expr_types {
                 Type::StructVar(name.clone())
             } else {
-                return Err(TypeCheck(format!("not match field types: {:?} vs {:?}", fields, expr_types)))
+                return Err(TypeCheck(format!(
+                    "not match field types: {:?} vs {:?}",
+                    fields, expr_types
+                )));
             }
         }
     })
 }
-
