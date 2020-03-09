@@ -32,7 +32,7 @@ impl Type {
 pub fn str_of_params(params: &[Type]) -> String {
     match params {
         [] => "()".to_string(),
-        [head, tail..] => tail
+        [head, tail @ ..] => tail
             .into_iter()
             .fold(format!("{}", head), |acc, typ| format!("{}, {}", acc, typ)),
     }

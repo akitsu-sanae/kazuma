@@ -18,7 +18,6 @@ macro_rules! hashmap(
     };
 );
 
-#[cfg(test)]
 fn check(module: Module, expected: &str, filename: &str) {
     use std::fs;
     use std::io::Write;
