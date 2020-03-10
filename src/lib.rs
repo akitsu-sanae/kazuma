@@ -7,11 +7,11 @@ extern crate lazy_static;
 extern crate libc;
 extern crate llvm_sys as llvm;
 
-mod codegen;
-mod error;
-mod program;
-mod typ;
-mod typecheck;
+pub mod codegen;
+pub mod error;
+pub mod program;
+pub mod typ;
+pub mod typecheck;
 
 #[cfg(test)]
 mod test;
